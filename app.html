@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertIA — Tu asesor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --purple: #6C47FF; --purple-dark: #4F2FE0; --purple-light: #EEE9FF;
+    --green: #00C48C; --dark: #0D0D1A; --gray: #6B7280;
+    --gray-light: #F3F4F6; --white: #FFFFFF; --text: #1F2937;
+  }
+  body { font-family: 'Inter', sans-serif; background: #F9FAFB; color: var(--text); min-height: 100vh; }
+  h1,h2,h3,.logo { font-family: 'Space Grotesk', sans-serif; }
+
+  /* NAV */
+  nav {
+    background: white; border-bottom: 1px solid #E5E7EB;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem; position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 20px; font-weight: 700; color: var(--dark); }
+  .logo span { color: var(--purple); }
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .user-name { font-size: 14px; color: var(--gray); }
+  .btn-sm {
+    padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-decoration: none; border: 1px solid #E5E7EB;
+    background: white; color: var(--text); transition: all 0.15s;
+  }
+  .btn-sm:hover { background: var(--gray-light); }
+
+  /* MAIN */
+  main { max-width: 660px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+  /* STEPS */
+  .step { display: none; }
+  .step.active { display: block; }
+
+  /* WELCOME */
+  .welcome-box { text-align: center; padding: 2rem 0; }
+  .welcome-emoji { font-size: 52px; margin-bottom: 1.25rem; }
+  .welcome-box h2 { font-size: 26px; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem; }
+  .welcome-box p { font-size: 15px; color: var(--gray); line-height: 1.7; max-width: 420px; margin: 0 auto 2rem; }
+  .demo-badge {
+    display: inline-block; background: #FEF3C7; border: 1px solid #FDE68A;
+    color: #92400E; font-size: 12px; font-weight: 500; padding: 5px 12px;
+    border-radius: 999px; margin-bottom: 1.5rem;
+  }
+
+  /* PROGRESS */
+  .progress-wrap { margin-bottom: 2rem; }
+  .progress-bar { height: 5px; background: #E5E7EB; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--purple); border-radius: 3px; transition: width 0.3s ease; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray); margin-top: 6px; }
+
+  /* QUESTION */
+  .question-card {
+    background: white; border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 2rem; margin-bottom: 1.5rem;
+  }
+  .q-label { font-size: 12px; font-weight: 600; color: var(--purple); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; }
+  .q-text { font-size: 18px; font-weight: 600; color: var(--dark); line-height: 1.4; margin-bottom: 1.5rem; }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; border: 1.5px solid #E5E7EB; border-radius: 12px;
+    cursor: pointer; transition: all 0.15s; background: white;
+  }
+  .option:hover { border-color: var(--purple); background: #FAFAFF; }
+  .option.selected { border-color: var(--purple); background: var(--purple-light); }
+  .option-dot {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid #D1D5DB;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .option.selected .option-dot { border-color: var(--purple); background: var(--purple); }
+  .option.selected .option-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: white; display: block; }
+  .option-text { font-size: 15px; color: var(--text); }
+  .option.selected .option-text { color: var(--purple-dark); font-weight: 500; }
+
+  /* NAV BUTTONS */
+  .nav-btns { display: flex; justify-content: space-between; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 11px 22px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .btn-back { background: white; border: 1.5px solid #E5E7EB; color: var(--text); }
+  .btn-back:hover { background: var(--gray-light); }
+  .btn-next { background: var(--purple); color: white; }
+  .btn-next:hover { background: var(--purple-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(108,71,255,0.3); }
+  .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-start { background: var(--purple); color: white; padding: 14px 32px; font-size: 16px; border-radius: 12px; width: 100%; justify-content: center; }
+  .btn-start:hover { background: var(--purple-dark); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(108,71,255,0.3); }
+
+  /* RESULTS */
+  .result-hero { text-align: center; margin-bottom: 2rem; }
+  .profile-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 24px; border-radius: 999px; font-size: 17px; font-weight: 600;
+    margin: 1rem 0;
+  }
+  .conservador { background: #EFF6FF; color: #1D4ED8; }
+  .moderado { background: var(--purple-light); color: var(--purple-dark); }
+  .arriesgado { background: #FFF7ED; color: #C2410C; }
+
+  /* SCORE BARS */
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 1.5rem 0; }
+  .score-item { background: white; border: 1px solid #E5E7EB; border-radius: 12px; padding: 1rem; text-align: center; }
+  .score-label { font-size: 12px; color: var(--gray); margin-bottom: 8px; }
+  .score-bar-bg { height: 6px; background: #E5E7EB; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+  .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .fill-c { background: #3B82F6; }
+  .fill-m { background: var(--purple); }
+  .fill-a { background: #F97316; }
+  .score-pct { font-size: 14px; font-weight: 600; color: var(--dark); }
+
+  /* AI BOX */
+  .ai-card {
+    background: white; border: 1px solid #E5E7EB; border-radius: 16px;
+    padding: 1.75rem; margin-top: 1.5rem;
+  }
+  .ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+  .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .ai-header span { font-size: 14px; font-weight: 600; color: var(--dark); }
+  .ai-header small { font-size: 12px; color: var(--gray); margin-left: auto; }
+  .ai-text { font-size: 15px; color: var(--text); line-height: 1.8; white-space: pre-wrap; }
+  .ai-loading { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gray); }
+  .dots span { animation: blink 1.2s infinite; display: inline-block; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  /* DEMO LIMIT */
+  .demo-limit {
+    background: #FFF7ED; border: 1px solid #FED7AA;
+    border-radius: 12px; padding: 1.5rem; text-align: center; margin-top: 1.5rem;
+  }
+  .demo-limit h3 { font-size: 17px; font-weight: 600; color: #92400E; margin-bottom: 0.5rem; }
+  .demo-limit p { font-size: 14px; color: #B45309; margin-bottom: 1.25rem; line-height: 1.6; }
+  .btn-upgrade { background: #6C47FF; color: white; padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+  .btn-upgrade:hover { background: #4F2FE0; transform: translateY(-1px); }
+
+  /* RESTART */
+  .restart-bar { text-align: center; margin-top: 2rem; }
+  .btn-restart { background: white; border: 1.5px solid #E5E7EB; color: var(--gray); padding: 10px 20px; border-radius: 10px; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .btn-restart:hover { border-color: var(--purple); color: var(--purple); }
+
+  .disclaimer { font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 1rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Invert<span>IA</span></div>
+  <div class="nav-right">
+    <span class="user-name" id="user-name-nav">Cargando...</span>
+    <a href="/logout" class="btn-sm">Salir</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- WELCOME -->
+  <div id="step-welcome" class="step active">
+    <div class="welcome-box">
+      <div class="welcome-emoji">👋</div>
+      <h2 id="welcome-title">¡Hola!</h2>
+      <p>Respondé 7 preguntas rápidas y te digo exactamente en qué conviene invertir según tu perfil y el mercado de hoy.</p>
+      <div id="demo-badge" class="demo-badge" style="display:none;">⚡ Usás tu demo gratis — 1 recomendación disponible</div>
+      <button class="btn btn-start" onclick="showQuiz()">Empezar el test →</button>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="step-quiz" class="step">
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-label"><span id="q-label">Pregunta 1 de 7</span><span id="q-pct">0%</span></div>
+    </div>
+    <div id="question-container"></div>
+    <div class="nav-btns">
+      <button class="btn btn-back" id="btn-back" onclick="prevQ()" style="visibility:hidden">← Atrás</button>
+      <button class="btn btn-next" id="btn-next" onclick="nextQ()" disabled>Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="step-result" class="step">
+    <div class="result-hero">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:4px;" id="result-greeting"></p>
+      <h2 style="font-size:24px;font-weight:700;color:var(--dark);">Tu perfil inversor</h2>
+      <div id="profile-badge" class="profile-badge"></div>
+      <p id="profile-desc" style="font-size:14px;color:var(--gray);max-width:420px;margin:0 auto;line-height:1.6;"></p>
+    </div>
+
+    <div class="score-grid">
+      <div class="score-item">
+        <div class="score-label">Conservador</div>
+        <div class="score-bar-bg"><div class="score-bar-fill fill-c" id="fill-c" style="width:0%"></div></div>
+        <div class="score-pct" id="pct-c">0%</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Moderado</div>
+        <div class="score-bar-bg"><div class="score-bar-fill fill-m" id="fill-m" style="width:0%"></div></div>
+        <div class="score-pct" id="pct-m">0%</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Arriesgado</div>
+        <div class="score-bar-bg"><div class="score-bar-fill fill-a" id="fill-a" style="width:0%"></div></div>
+        <div class="score-pct" id="pct-a">0%</div>
+      </div>
+    </div>
+
+    <div class="ai-card" id="ai-card">
+      <div class="ai-header">
+        <div class="ai-dot"></div>
+        <span>Lo que te sugiero</span>
+        <small>Análisis en tiempo real</small>
+      </div>
+      <div id="ai-content" class="ai-loading">
+        <span>Analizando el mercado para vos</span>
+        <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+      </div>
+    </div>
+
+    <div id="demo-limit-box" class="demo-limit" style="display:none;">
+      <h3>🔒 Usaste tu demo gratis</h3>
+      <p>Para seguir recibiendo recomendaciones actualizadas y acceso ilimitado, pasate al plan Pro por solo U$S 8/mes.</p>
+      <a href="/upgrade" class="btn-upgrade">Ver Plan Pro →</a>
+    </div>
+
+    <p class="disclaimer">⚠️ Contenido educativo e informativo. No constituye asesoramiento financiero profesional.</p>
+
+    <div class="restart-bar">
+      <button class="btn-restart" onclick="restart()">↺ Hacer el test de nuevo</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const questions = [
+  {
+    text: "¿Cuál es tu objetivo principal al invertir?",
+    options: [
+      { text: "Proteger mi capital, aunque gane poco", score: [3,1,0] },
+      { text: "Crecer moderadamente con cierto riesgo controlado", score: [1,3,1] },
+      { text: "Maximizar ganancias, aunque implique mayor riesgo", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "¿En cuánto tiempo necesitás el dinero que invertís?",
+    options: [
+      { text: "Menos de 1 año", score: [3,0,0] },
+      { text: "Entre 1 y 5 años", score: [1,3,1] },
+      { text: "Más de 5 años", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "Si tu inversión cae un 20% en un mes, ¿qué hacés?",
+    options: [
+      { text: "Vendo todo para no perder más", score: [3,0,0] },
+      { text: "Me preocupo pero espero que se recupere", score: [1,3,0] },
+      { text: "Compro más, es una oportunidad", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "¿Qué porcentaje de tus ahorros estás dispuesto a arriesgar?",
+    options: [
+      { text: "Menos del 10%", score: [3,1,0] },
+      { text: "Entre el 10% y 30%", score: [0,3,1] },
+      { text: "Más del 30%", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "¿Cuánta experiencia tenés invirtiendo?",
+    options: [
+      { text: "Ninguna o muy poca", score: [3,1,0] },
+      { text: "Algo de experiencia con fondos o acciones", score: [1,3,1] },
+      { text: "Experiencia con cripto, opciones o derivados", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "¿Cómo es tu situación económica actual?",
+    options: [
+      { text: "Ajustada, necesito ese dinero por si acaso", score: [3,1,0] },
+      { text: "Estable, tengo un fondo de emergencia separado", score: [1,3,1] },
+      { text: "Holgada, puedo perder este dinero sin problema", score: [0,1,3] }
+    ]
+  },
+  {
+    text: "¿Cómo preferís que sea tu cartera?",
+    options: [
+      { text: "Plazos fijos, bonos y activos muy seguros", score: [3,0,0] },
+      { text: "Mix entre renta fija y acciones diversificadas", score: [0,3,0] },
+      { text: "Acciones, cripto y activos de alto potencial", score: [0,0,3] }
+    ]
+  }
+];
+
+let current = 0;
+let answers = new Array(questions.length).fill(null);
+let userData = null;
+
+async function loadUser() {
+  const res = await fetch('/me');
+  const data = await res.json();
+  if (!data.loggedIn) return window.location.href = '/login';
+  userData = data.user;
+  document.getElementById('user-name-nav').textContent = userData.name;
+  document.getElementById('welcome-title').textContent = `¡Hola, ${userData.name}!`;
+  if (userData.plan !== 'paid' && userData.demo_used >= 1) {
+    document.getElementById('demo-badge').style.display = 'none';
+    document.querySelector('#step-welcome p').textContent = 'Ya usaste tu demo gratis. Pasate al plan Pro para recibir recomendaciones ilimitadas.';
+    const btn = document.querySelector('.btn-start');
+    btn.textContent = 'Ver Plan Pro →';
+    btn.onclick = () => window.location.href = '/upgrade';
+  } else if (userData.plan !== 'paid') {
+    document.getElementById('demo-badge').style.display = 'inline-block';
+  }
+}
+
+function showQuiz() {
+  document.getElementById('step-welcome').classList.remove('active');
+  document.getElementById('step-quiz').classList.add('active');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  const pct = Math.round((current / questions.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('q-label').textContent = `Pregunta ${current + 1} de ${questions.length}`;
+  document.getElementById('q-pct').textContent = pct + '%';
+  document.getElementById('btn-back').style.visibility = current > 0 ? 'visible' : 'hidden';
+  const isLast = current === questions.length - 1;
+  document.getElementById('btn-next').textContent = isLast ? 'Ver resultados →' : 'Siguiente →';
+  const saved = answers[current];
+  document.getElementById('question-container').innerHTML = `
+    <div class="question-card">
+      <div class="q-label">Pregunta ${current + 1}</div>
+      <div class="q-text">${q.text}</div>
+      <div class="options">
+        ${q.options.map((opt, i) => `
+          <div class="option ${saved === i ? 'selected' : ''}" onclick="selectOption(${i})">
+            <div class="option-dot"></div>
+            <div class="option-text">${opt.text}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('btn-next').disabled = saved === null;
+}
+
+function selectOption(i) {
+  answers[current] = i;
+  renderQuestion();
+}
+
+function nextQ() {
+  if (answers[current] === null) return;
+  if (current < questions.length - 1) { current++; renderQuestion(); }
+  else showResults();
+}
+
+function prevQ() {
+  if (current > 0) { current--; renderQuestion(); }
+}
+
+function showResults() {
+  let scores = [0, 0, 0];
+  answers.forEach((ans, qi) => {
+    if (ans !== null) {
+      const s = questions[qi].options[ans].score;
+      scores[0] += s[0]; scores[1] += s[1]; scores[2] += s[2];
+    }
+  });
+  const total = scores[0] + scores[1] + scores[2] || 1;
+  const pcts = scores.map(s => Math.round((s / total) * 100));
+  const maxIdx = scores.indexOf(Math.max(...scores));
+  const profiles = [
+    { key: 'conservador', label: '🛡️ Conservador', desc: 'Priorizás la seguridad sobre la rentabilidad. Buscás preservar tu capital con inversiones estables y predecibles.' },
+    { key: 'moderado', label: '⚖️ Moderado', desc: 'Buscás equilibrio entre crecimiento y seguridad. Aceptás algo de volatilidad si hay potencial de retorno razonable.' },
+    { key: 'arriesgado', label: '🚀 Arriesgado', desc: 'Buscás maximizar tus retornos. Tenés horizonte largo y tolerancia a las pérdidas temporales.' }
+  ];
+  const profile = profiles[maxIdx];
+
+  document.getElementById('step-quiz').classList.remove('active');
+  document.getElementById('step-result').classList.add('active');
+
+  document.getElementById('result-greeting').textContent = `Listo, ${userData.name}! Analizamos tus respuestas:`;
+  const badge = document.getElementById('profile-badge');
+  badge.textContent = profile.label;
+  badge.className = 'profile-badge ' + profile.key;
+  document.getElementById('profile-desc').textContent = profile.desc;
+
+  setTimeout(() => {
+    document.getElementById('fill-c').style.width = pcts[0] + '%';
+    document.getElementById('fill-m').style.width = pcts[1] + '%';
+    document.getElementById('fill-a').style.width = pcts[2] + '%';
+    document.getElementById('pct-c').textContent = pcts[0] + '%';
+    document.getElementById('pct-m').textContent = pcts[1] + '%';
+    document.getElementById('pct-a').textContent = pcts[2] + '%';
+  }, 100);
+
+  fetchRecommendation(profile.label.replace(/[^\w\s]/g, '').trim(), profile.desc, pcts);
+}
+
+async function fetchRecommendation(profile, profileDesc, scores) {
+  const aiContent = document.getElementById('ai-content');
+  const res = await fetch('/api/recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile, profileDesc, scores })
+  });
+  const data = await res.json();
+
+  if (data.error === 'demo_limit') {
+    document.getElementById('ai-card').style.display = 'none';
+    document.getElementById('demo-limit-box').style.display = 'block';
+    return;
+  }
+
+  if (data.ok) {
+    aiContent.className = 'ai-text';
+    aiContent.textContent = data.text;
+    if (data.plan !== 'paid' && data.demoUsed >= 1) {
+      document.getElementById('demo-limit-box').style.display = 'block';
+    }
+  } else {
+    aiContent.className = 'ai-text';
+    aiContent.textContent = 'Error al conectar con la IA. Intentá de nuevo más tarde.';
+  }
+}
+
+function restart() {
+  current = 0;
+  answers = new Array(questions.length).fill(null);
+  document.getElementById('step-result').classList.remove('active');
+  document.getElementById('step-welcome').classList.add('active');
+  document.getElementById('ai-content').className = 'ai-loading';
+  document.getElementById('ai-content').innerHTML = '<span>Analizando el mercado para vos</span><span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+  document.getElementById('demo-limit-box').style.display = 'none';
+  document.getElementById('ai-card').style.display = 'block';
+  loadUser();
+}
+
+loadUser();
+</script>
+</body>
+</html>
