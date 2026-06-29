@@ -42,7 +42,6 @@ def init_db():
 
 init_db()
 
-# --- STATIC ---
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
@@ -76,7 +75,6 @@ def logout():
     session.clear()
     return redirect('/')
 
-# --- AUTH API ---
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -126,7 +124,6 @@ def me():
         return jsonify({'loggedIn': False})
     return jsonify({'loggedIn': True, 'user': dict(user)})
 
-# --- APP API ---
 @app.route('/api/recommend', methods=['POST'])
 def recommend():
     if not session.get('user_id'):
@@ -142,57 +139,24 @@ def recommend():
 
     data = request.json or {}
     profile = data.get('profile', '')
-    profile_desc = data.get('profileDesc', '')
     scores = data.get('scores', [0,0,0])
     capital = data.get('capital', 'no especificado')
     name = user['name']
 
-    prompt = f"""Sos un asesor financiero argentino experto, directo y cercano. Usás el voseo. Hablás como alguien que sabe mucho pero lo explica fácil.
+    prompt = f"""Sos un asesor financiero argentino. Usás el voseo. Breve y directo.
 
-DATOS DEL USUARIO:
-- Nombre: {name}
-- Perfil: {profile}
-- Descripción del perfil: {profile_desc}
-- Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%
-- Capital disponible para invertir: {capital}
+Usuario: {name}, perfil {profile}, capital {capital}.
+Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.
+Mercado actual (jun 2026): inflación ~2.3% mensual, dólar en bandas ($1757 techo), Merval volátil por MSCI, S&P500 alcista por IA, riesgo país bajando.
 
-CONTEXTO ACTUAL DEL MERCADO ARGENTINO (junio 2026):
-- Inflación mensual: ~2.3% (desacelerando)
-- Dólar oficial dentro de bandas cambiarias, techo en $1757
-- Merval con volatilidad por decisión del MSCI de reclasificar Argentina
-- Riesgo país bajando sostenidamente
-- S&P 500 en tendencia positiva traccionado por sector tecnológico (IA)
-- Reservas del BCRA en recuperación
-- Bonos soberanos en USD con spreads comprimiéndose
+Respondé en DOS partes separadas por ---INSTRUMENTS---
 
-Tu respuesta debe tener DOS partes separadas por "---INSTRUMENTS---":
+PARTE 1 (máximo 150 palabras, sin asteriscos):
+Saludá a {name}, validá su perfil, contá brevemente el mercado, recomendá 3 instrumentos concretos con porcentajes según capital {capital}, cerrá con frase motivadora.
 
-PARTE 1: Análisis narrativo (máximo 200 palabras)
-- Saludá a {name} por nombre y validá su perfil en 1 oración
-- Contá el contexto del mercado hoy en 2-3 oraciones simples, como si hablaras con un amigo
-- Con el capital de {capital}, explicá cómo distribuirías la inversión (porcentajes concretos)
-- Recomendá 3 instrumentos concretos con una línea de por qué cada uno encaja con su perfil y capital
-- Cerrá con una frase motivadora corta
-- No uses asteriscos ni markdown
-
-PARTE 2: Después de "---INSTRUMENTS---", respondé SOLO con un JSON válido con esta estructura exacta:
-{{
-  "instruments": [
-    {{
-      "name": "Nombre del instrumento (ej: Plazo Fijo UVA)",
-      "category": "Renta Fija / CEDEARs / Cripto / Acciones / FCI",
-      "type": "conservador | moderado | arriesgado",
-      "description": "1-2 oraciones simples explicando qué es y por qué lo recomendás para este perfil y capital",
-      "trend": "up | down | neutral",
-      "trendNote": "Texto corto sobre la tendencia del último año",
-      "labels": ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
-      "data": [100, 108, 115, 122, 130, 128, 135, 142, 150, 158, 165, 172],
-      "unit": "$"
-    }}
-  ],
-  "macro": "1-2 oraciones sobre el contexto macro global/nacional más relevante que puede impactar estas inversiones en los próximos meses."
-}}
-Los datos del array "data" deben ser 12 números que representen la evolución aproximada del instrumento en el último año. Usá tendencias reales conocidas."""
+PARTE 2: solo JSON válido:
+{{"instruments":[{{"name":"nombre","category":"tipo","type":"conservador|moderado|arriesgado","description":"1 oración","trend":"up|down|neutral","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140],"unit":"$"}}],"macro":"1 oración sobre riesgo macro relevante."}}
+Incluí 3 instrumentos en el array. Los datos deben reflejar tendencias reales del último año."""
 
     try:
         resp = requests.post(
@@ -203,22 +167,22 @@ Los datos del array "data" deben ser 12 números que representen la evolución a
                 'anthropic-version': '2023-06-01'
             },
             json={
-                'model': 'claude-sonnet-4-6',
-                'max_tokens': 1500,
+                'model': 'claude-haiku-4-5-20251001',
+                'max_tokens': 1200,
                 'messages': [{'role': 'user', 'content': prompt}]
             },
-            timeout=60
+            timeout=55
         )
         result = resp.json()
 
         if 'error' in result:
             print('Anthropic API error:', result['error'])
             conn.close()
-            return jsonify({'ok': False, 'error': 'Error en la API de IA: ' + str(result['error'].get('message',''))})
+            return jsonify({'ok': False, 'error': 'Error en la API: ' + str(result['error'].get('message',''))})
 
         full_text = result.get('content', [{}])[0].get('text', '')
+        print('API response ok, length:', len(full_text))
 
-        # Split narrative from instruments JSON
         parts = full_text.split('---INSTRUMENTS---')
         text = parts[0].strip()
         instruments = []
@@ -245,8 +209,12 @@ Los datos del array "data" deben ser 12 números que representen la evolución a
         return jsonify({'ok': True, 'text': text, 'instruments': instruments, 'macro': macro,
                         'demoUsed': updated['demo_used'], 'plan': updated['plan']})
 
+    except requests.exceptions.Timeout:
+        print('Timeout calling Anthropic API')
+        conn.close()
+        return jsonify({'ok': False, 'error': 'La IA tardó demasiado. Intentá de nuevo.'})
     except Exception as e:
-        print('Exception in /api/recommend:', e)
+        print('Exception in /api/recommend:', str(e))
         conn.close()
         return jsonify({'ok': False, 'error': str(e)})
 
