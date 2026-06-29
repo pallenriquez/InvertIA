@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión — InvertIA</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .card {
+    background: white; border-radius: 20px; padding: 2.5rem;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .logo { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #0D0D1A; margin-bottom: 0.25rem; }
+  .logo span { color: #6C47FF; }
+  .subtitle { font-size: 14px; color: #6B7280; margin-bottom: 2rem; }
+  h2 { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #0D0D1A; margin-bottom: 0.25rem; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; margin-top: 1rem; }
+  input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #E5E7EB;
+    border-radius: 10px; font-size: 15px; color: #1F2937;
+    transition: border-color 0.2s; outline: none; font-family: 'Inter', sans-serif;
+  }
+  input:focus { border-color: #6C47FF; box-shadow: 0 0 0 3px rgba(108,71,255,0.1); }
+  .btn {
+    width: 100%; padding: 13px; background: #6C47FF; color: white;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 1.5rem; transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .btn:hover { background: #4F2FE0; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .error { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 1rem; display: none; }
+  .footer-link { text-align: center; margin-top: 1.25rem; font-size: 14px; color: #6B7280; }
+  .footer-link a { color: #6C47FF; text-decoration: none; font-weight: 500; }
+  .back { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #6B7280; text-decoration: none; margin-bottom: 1.5rem; }
+  .back:hover { color: #6C47FF; }
+</style>
+</head>
+<body>
+<div class="card">
+  <a href="/" class="back">← Volver al inicio</a>
+  <div class="logo">Invert<span>IA</span></div>
+  <div class="subtitle">Tu asesor financiero con IA</div>
+  <h2>Bienvenido de vuelta</h2>
+
+  <form id="form">
+    <label>Email</label>
+    <input type="email" id="email" placeholder="tu@email.com" required autocomplete="email" />
+
+    <label>Contraseña</label>
+    <input type="password" id="password" placeholder="Tu contraseña" required autocomplete="current-password" />
+
+    <div class="error" id="error"></div>
+    <button type="submit" class="btn" id="btn">Iniciar sesión →</button>
+  </form>
+
+  <div class="footer-link">¿No tenés cuenta? <a href="/register">Registrate gratis</a></div>
+</div>
+
+<script>
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn');
+  const error = document.getElementById('error');
+  error.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  const res = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value
+    })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    window.location.href = '/app';
+  } else {
+    error.textContent = data.error;
+    error.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión →';
+  }
+});
+</script>
+</body>
+</html>
