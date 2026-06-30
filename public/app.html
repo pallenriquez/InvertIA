@@ -201,7 +201,7 @@
     <div class="welcome-box">
       <div class="welcome-emoji">👋</div>
       <h2 id="welcome-title">¡Hola!</h2>
-      <p>Respondé 7 preguntas rápidas y te damos recomendaciones personalizadas. Después podés chatear con tu asesor IA para profundizar.</p>
+      <p>Respondé 7 preguntas rápidas y te damos recomendaciones personalizadas según tu perfil y el mercado de hoy.</p>
       <div id="demo-badge" class="demo-badge" style="display:none;">⚡ Demo gratis — 1 análisis disponible</div>
       <button class="btn btn-start" onclick="showQuiz()">Empezar el test →</button>
     </div>
@@ -497,7 +497,7 @@ async function fetchInitialRecommendation() {
 
     // Ask for capital
     setTimeout(() => {
-      addAIMessage('Para darte una cartera más precisa con porcentajes exactos... ¿con cuánto capital contás para invertir? Podés decirme en pesos, dólares o lo que tengas en mente.');
+      addAIMessage('¿Con cuánto capital contás para invertir?');
       awaitingCapital = true;
       document.getElementById('chat-input-section').style.display = 'block';
       if (data.demoUsed >= 1 && data.plan !== 'paid') {
@@ -635,7 +635,25 @@ function restart() {
   loadUser();
 }
 
-// ===================== SUPPORT BOT =====================
+loadUser();
+
+// Si viene de upgrade, mostrar chat sin reiniciar
+if (new URLSearchParams(window.location.search).get('upgraded') === '1') {
+  history.replaceState({}, '', '/app');
+  setTimeout(() => {
+    document.getElementById('step-welcome').classList.remove('active');
+    document.getElementById('step-result').classList.add('active');
+    document.getElementById('chat-input-section').style.display = 'block';
+    document.getElementById('demo-limit-box').style.display = 'none';
+    addAIMessage('¡Ya tenés el plan Pro activo! Podés seguir desde acá. ¿Con cuánto capital contás para invertir?');
+    awaitingCapital = true;
+    // Set default profile in case test wasn't done
+    if (!resultProfile) {
+      resultProfile = { key: 'moderado', label: '⚖️ Moderado', desc: '' };
+      resultScores = [33, 34, 33];
+    }
+  }, 500);
+}
 let supportOpen = false, supportStep = 'greeting', supportData = {};
 
 function toggleSupport() {
