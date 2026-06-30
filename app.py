@@ -48,26 +48,22 @@ def index():
 
 @app.route('/register')
 def register_page():
-    if session.get('user_id'):
-        return redirect('/app')
+    if session.get('user_id'): return redirect('/app')
     return send_from_directory('public', 'register.html')
 
 @app.route('/login')
 def login_page():
-    if session.get('user_id'):
-        return redirect('/app')
+    if session.get('user_id'): return redirect('/app')
     return send_from_directory('public', 'login.html')
 
 @app.route('/app')
 def app_page():
-    if not session.get('user_id'):
-        return redirect('/login')
+    if not session.get('user_id'): return redirect('/login')
     return send_from_directory('public', 'app.html')
 
 @app.route('/upgrade')
 def upgrade_page():
-    if not session.get('user_id'):
-        return redirect('/login')
+    if not session.get('user_id'): return redirect('/login')
     return send_from_directory('public', 'upgrade.html')
 
 @app.route('/logout')
@@ -115,15 +111,14 @@ def login():
 
 @app.route('/me')
 def me():
-    if not session.get('user_id'):
-        return jsonify({'loggedIn': False})
+    if not session.get('user_id'): return jsonify({'loggedIn': False})
     conn = get_db()
     user = conn.execute('SELECT id, name, email, plan, demo_used FROM users WHERE id=?', (session['user_id'],)).fetchone()
     conn.close()
-    if not user:
-        return jsonify({'loggedIn': False})
+    if not user: return jsonify({'loggedIn': False})
     return jsonify({'loggedIn': True, 'user': dict(user)})
 
+# --- INITIAL RECOMMENDATION ---
 @app.route('/api/recommend', methods=['POST'])
 def recommend():
     if not session.get('user_id'):
@@ -140,102 +135,59 @@ def recommend():
     data = request.json or {}
     profile = data.get('profile', '')
     scores = data.get('scores', [0,0,0])
-    capital = data.get('capital', 'no especificado')
     name = user['name']
 
-    prompt = f"""Sos un asesor financiero argentino que habla con personas que NO saben de finanzas. Usás el voseo. Sos cálido, simple y directo. Evitás la jerga técnica. Si usás un término financiero, lo explicás en una palabra entre paréntesis.
-
-Usuario: {name}, perfil {profile}.
-Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.
-Mercado actual (jun 2026): inflación bajando al 2.3% mensual, dólar estable, bolsa argentina volátil, mercado americano subiendo por el boom de la IA, riesgo país en baja.
-
-Respondé en DOS partes separadas por ---INSTRUMENTS---
-
-PARTE 1 (máximo 120 palabras, sin asteriscos, sin markdown):
-- Saludá a {name} por nombre de forma breve y cálida
-- En 1-2 oraciones simples contá cómo está el mercado hoy, como si se lo explicaras a un amigo
-- Recomendá 3 instrumentos con una oración cada uno explicando QUÉ ES y POR QUÉ le conviene, en lenguaje simple
-- Cerrá con una frase corta y motivadora
-
-PARTE 2: solo JSON válido sin texto extra:
-{{"instruments":[{{"name":"nombre corto","category":"tipo simple (ej: Bono, Acción, Fondo)","type":"conservador|moderado|arriesgado","description":"qué es en palabras simples y por qué conviene","trend":"up|down|neutral","trendNote":"cómo le fue en el último año en palabras simples","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140],"unit":"$"}}],"macro":"1 oración simple sobre algo del contexto que puede afectar estas inversiones."}}
-Incluí exactamente 3 instrumentos. Los datos deben reflejar tendencias reales del último año."""
+    prompt = (
+        f"Sos un asesor financiero argentino experto. Hablás con el voseo. "
+        f"Sos directo, profesional y claro. Cuando usas un termino tecnico lo aclaras brevemente entre parentesis.\n\n"
+        f"El usuario se llama {name}, tiene perfil {profile} "
+        f"(Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%).\n"
+        f"Mercado actual junio 2026: inflacion bajando al 2.3% mensual, dolar estable dentro de bandas cambiarias, "
+        f"bolsa argentina volatil por rebalanceo de indices internacionales, mercado americano en tendencia alcista "
+        f"impulsado por el sector tecnologico, riesgo pais argentino en baja sostenida.\n\n"
+        f"Respondé de forma breve y profesional:\n"
+        f"- 1 oracion saludando a {name} y validando su perfil\n"
+        f"- 2 oraciones sobre el contexto del mercado hoy, claras y concretas\n"
+        f"- 3 instrumentos recomendados como items, cada uno con: nombre, que es en una frase simple, y por que encaja con su perfil\n"
+        f"- 1 oracion final sobre proximos pasos concretos\n"
+        f"Sin asteriscos. Sin markdown. Sin frases motivacionales vacias. Maximo 180 palabras."
+    )
 
     try:
         resp = requests.post(
             'https://api.anthropic.com/v1/messages',
-            headers={
-                'Content-Type': 'application/json',
-                'x-api-key': ANTHROPIC_KEY,
-                'anthropic-version': '2023-06-01'
-            },
-            json={
-                'model': 'claude-haiku-4-5-20251001',
-                'max_tokens': 1200,
-                'messages': [{'role': 'user', 'content': prompt}]
-            },
+            headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
+            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 600, 'messages': [{'role': 'user', 'content': prompt}]},
             timeout=55
         )
         result = resp.json()
-
         if 'error' in result:
-            print('Anthropic API error:', result['error'])
             conn.close()
-            return jsonify({'ok': False, 'error': 'Error en la API: ' + str(result['error'].get('message',''))})
+            return jsonify({'ok': False, 'error': str(result['error'].get('message','Error API'))})
 
-        full_text = result.get('content', [{}])[0].get('text', '')
-        print('API response ok, length:', len(full_text))
-
-        parts = full_text.split('---INSTRUMENTS---')
-        text = parts[0].strip()
-        instruments = []
-        macro = ''
-
-        if len(parts) > 1:
-            try:
-                json_str = parts[1].strip().replace('```json','').replace('```','').strip()
-                parsed = json.loads(json_str)
-                instruments = parsed.get('instruments', [])
-                macro = parsed.get('macro', '')
-            except Exception as e:
-                print('JSON parse error:', e)
+        text = result.get('content', [{}])[0].get('text', '').strip()
+        print('recommend ok, len:', len(text))
 
         if user['plan'] != 'paid':
             conn.execute('UPDATE users SET demo_used = demo_used + 1 WHERE id=?', (session['user_id'],))
             conn.commit()
 
-        conn.execute('INSERT INTO history (user_id, profile, recommendations) VALUES (?,?,?)',
-                     (session['user_id'], profile, text))
+        conn.execute('INSERT INTO history (user_id, profile, recommendations) VALUES (?,?,?)', (session['user_id'], profile, text))
         conn.commit()
         updated = conn.execute('SELECT demo_used, plan FROM users WHERE id=?', (session['user_id'],)).fetchone()
         conn.close()
-        return jsonify({'ok': True, 'text': text, 'instruments': instruments, 'macro': macro,
-                        'demoUsed': updated['demo_used'], 'plan': updated['plan']})
+        return jsonify({'ok': True, 'text': text, 'demoUsed': updated['demo_used'], 'plan': updated['plan']})
 
     except requests.exceptions.Timeout:
-        print('Timeout calling Anthropic API')
         conn.close()
         return jsonify({'ok': False, 'error': 'La IA tardó demasiado. Intentá de nuevo.'})
     except Exception as e:
-        print('Exception in /api/recommend:', str(e))
+        print('Exception recommend:', str(e))
         conn.close()
         return jsonify({'ok': False, 'error': str(e)})
 
-@app.route('/api/activate-paid', methods=['POST'])
-def activate_paid():
-    if not session.get('user_id'):
-        return jsonify({'ok': False})
-    conn = get_db()
-    conn.execute("UPDATE users SET plan='paid' WHERE id=?", (session['user_id'],))
-    conn.commit()
-    conn.close()
-    return jsonify({'ok': True})
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 3000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-
-
+# --- CHAT ---
 @app.route('/api/chat', methods=['POST'])
 def chat():
     if not session.get('user_id'):
@@ -250,38 +202,34 @@ def chat():
     profile = data.get('profile', '')
     scores = data.get('scores', [0,0,0])
     history = data.get('history', [])
-    is_capital = data.get('isCapital', False)
     message = data.get('message', '')
+    needs_chart = data.get('needsChart', False)
 
-    base_system = (
-        "Sos un asesor financiero argentino que habla con personas que NO saben de finanzas. "
-        "Usás el voseo. Sos cálido, simple y directo. Nunca usás jerga sin explicarla. Sin asteriscos ni markdown.\n"
-        f"Perfil del usuario: {profile}. Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.\n"
-        "Mercado actual (jun 2026): inflación ~2.3% mensual, dólar estable en bandas, bolsa argentina volátil, S&P500 subiendo por IA, riesgo país bajando.\n\n"
+    system = (
+        "Sos un asesor financiero argentino experto. Hablás con el voseo. "
+        "Sos directo, profesional y claro. Cuando usas un termino tecnico lo aclaras brevemente entre parentesis. "
+        "Sin asteriscos ni markdown.\n"
+        f"Perfil del usuario: {profile}. Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.\n"
+        "Mercado actual junio 2026: inflacion ~2.3% mensual, dolar estable en bandas, bolsa argentina volatil, "
+        "S&P500 alcista por sector tech, riesgo pais bajando.\n\n"
+        "REGLAS:\n"
+        "- Respondé de forma concisa y util. No te extiendas innecesariamente.\n"
+        "- Si el usuario menciona un monto de capital, arma una distribucion concreta con porcentajes que sumen 100.\n"
+        "- Solo incluí graficos si la pregunta es sobre tendencias, proyecciones o comparacion de instrumentos.\n"
+        "- Si incluís graficos, escribí ---CHART--- al final y un JSON con esta estructura exacta:\n"
+        '{"instruments":[{"name":"nombre","pct":40,"description":"que es en palabras simples",'
+        '"trend":"up|down|neutral","trendNote":"como le fue el ultimo año",'
+        '"labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],'
+        '"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}\n'
+        "- Si hay distribucion de capital incluí pct en cada instrumento sumando 100. Si no hay capital, pct puede ser 0.\n"
+        "- Maximo 3 instrumentos en el JSON.\n"
+        "- Si la pregunta NO requiere graficos, respondé solo con texto, sin ---CHART---."
     )
-    if is_capital:
-        capital_instructions = (
-            'El usuario te acaba de decir con cuánto capital cuenta. Respondé así:\n'
-            '1) Una oración cálida reconociendo el capital\n'
-            '2) Cómo distribuirías ese capital en porcentajes concretos (ej: "40% en X, 40% en Y, 20% en Z")\n'
-            '3) Para cada instrumento: 1 oración explicando qué es en palabras simples y por qué le conviene\n'
-            '4) Una oración de cierre motivadora\n'
-            'Sin asteriscos. Sin markdown. Máximo 150 palabras.\n'
-            'Despues del texto escribi ---INSTRUMENTS--- y un JSON exactamente asi:\n'
-            '{"instruments":[{"name":"nombre","pct":40,"description":"que es en palabras simples","trend":"up|down|neutral","trendNote":"como le fue el ultimo año","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}\n'
-            'Incluí exactamente 3 instrumentos con pct que sumen 100.'
-        )
-        system = base_system + capital_instructions
-    else:
-        system = (
-            base_system +
-            'Respondé la consulta de forma simple y breve, como si le explicaras a alguien que nunca invirtió. '
-            'Si pregunta por un instrumento, explicá QUÉ ES primero. Máximo 3 párrafos cortos. Sin asteriscos ni markdown.'
-        )
 
     messages = []
-    for h in history[-6:]:
-        messages.append({'role': h['role'], 'content': h['content']})
+    for h in history[-8:]:
+        if h.get('role') and h.get('content'):
+            messages.append({'role': h['role'], 'content': h['content']})
     if not messages or messages[-1]['role'] != 'user':
         messages.append({'role': 'user', 'content': message})
 
@@ -289,7 +237,7 @@ def chat():
         resp = requests.post(
             'https://api.anthropic.com/v1/messages',
             headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
-            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 1000, 'system': system, 'messages': messages},
+            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 900, 'system': system, 'messages': messages},
             timeout=55
         )
         result = resp.json()
@@ -297,8 +245,10 @@ def chat():
             conn.close()
             return jsonify({'ok': False, 'error': str(result['error'])})
 
-        full_text = result.get('content', [{}])[0].get('text', '')
-        parts = full_text.split('---INSTRUMENTS---')
+        full_text = result.get('content', [{}])[0].get('text', '').strip()
+        print('chat ok, len:', len(full_text))
+
+        parts = full_text.split('---CHART---')
         text = parts[0].strip()
         instruments = []
 
@@ -313,7 +263,25 @@ def chat():
         conn.close()
         return jsonify({'ok': True, 'text': text, 'instruments': instruments})
 
+    except requests.exceptions.Timeout:
+        conn.close()
+        return jsonify({'ok': False, 'error': 'La IA tardó demasiado. Intentá de nuevo.'})
     except Exception as e:
-        print('Exception in /api/chat:', str(e))
+        print('Exception chat:', str(e))
         conn.close()
         return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/api/activate-paid', methods=['POST'])
+def activate_paid():
+    if not session.get('user_id'): return jsonify({'ok': False})
+    conn = get_db()
+    conn.execute("UPDATE users SET plan='paid' WHERE id=?", (session['user_id'],))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 3000))
+    app.run(host='0.0.0.0', port=port, debug=False)
