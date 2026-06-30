@@ -231,3 +231,68 @@ def activate_paid():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    if not session.get('user_id'):
+        return jsonify({'ok': False, 'error': 'No autenticado.'})
+    conn = get_db()
+    user = conn.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'ok': False, 'error': 'Usuario no encontrado.'})
+
+    data = request.json or {}
+    profile = data.get('profile', '')
+    scores = data.get('scores', [0,0,0])
+    history = data.get('history', [])
+    is_capital = data.get('isCapital', False)
+    message = data.get('message', '')
+
+    system = f"""Sos un asesor financiero argentino experto. Usás el voseo. Sos claro, directo y profesional pero cercano.
+Perfil del usuario: {profile}. Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.
+Mercado actual (jun 2026): inflación ~2.3% mensual, dólar en bandas ($1757 techo), Merval volátil por MSCI, S&P500 alcista por IA, riesgo país bajando.
+
+{'El usuario acaba de decirte con cuánto capital cuenta. Respondé con: 1) una línea diciendo cómo distribuirías ese capital en porcentajes concretos, 2) breve descripción de cada instrumento recomendado (máx 2 líneas c/u), 3) una observación sobre el contexto macro relevante. Sé concreto y sin rodeos. No uses asteriscos ni markdown. Después del texto, escribí ---INSTRUMENTS--- y un JSON con esta estructura: {"instruments":[{"name":"nombre","pct":40,"description":"1 oración","trend":"up|down|neutral","trendNote":"texto corto","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}'
+if is_capital else
+'Respondé la consulta del usuario de forma clara y breve. Si pregunta por un instrumento específico, explicalo simple. Si pregunta por el mercado, contextualizá. Máximo 3-4 párrafos cortos. Sin asteriscos ni markdown.'}"""
+
+    messages = []
+    for h in history[-6:]:
+        messages.append({'role': h['role'], 'content': h['content']})
+    if not messages or messages[-1]['role'] != 'user':
+        messages.append({'role': 'user', 'content': message})
+
+    try:
+        resp = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
+            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 1000, 'system': system, 'messages': messages},
+            timeout=55
+        )
+        result = resp.json()
+        if 'error' in result:
+            conn.close()
+            return jsonify({'ok': False, 'error': str(result['error'])})
+
+        full_text = result.get('content', [{}])[0].get('text', '')
+        parts = full_text.split('---INSTRUMENTS---')
+        text = parts[0].strip()
+        instruments = []
+
+        if len(parts) > 1:
+            try:
+                json_str = parts[1].strip().replace('```json','').replace('```','').strip()
+                parsed = json.loads(json_str)
+                instruments = parsed.get('instruments', [])
+            except Exception as e:
+                print('JSON parse error:', e)
+
+        conn.close()
+        return jsonify({'ok': True, 'text': text, 'instruments': instruments})
+
+    except Exception as e:
+        print('Exception in /api/chat:', str(e))
+        conn.close()
+        return jsonify({'ok': False, 'error': str(e)})
