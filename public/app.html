@@ -452,9 +452,11 @@ async function sendChat() {
       if(data.ok){
         addAI(data.text);
         if(data.instruments&&data.instruments.length>0){
-          const hasPct=data.instruments.some(i=>i.pct>0);
-          if(hasPct) renderPie(data.instruments);
-          data.instruments.forEach(inst=>renderLine(inst));
+          const realInsts=data.instruments.filter(i=>i.pct>0);
+          const projection=data.instruments.find(i=>i.name==='Proyeccion total'||(i.pct===0&&i.data&&i.data.length>12));
+          if(realInsts.length>0) renderPie(realInsts);
+          realInsts.forEach(inst=>renderLine(inst));
+          if(projection) renderProjection(projection);
         }
       } else { addAI('Hubo un error. Intentá de nuevo.'); }
     } catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error de conexión.');}
@@ -471,9 +473,11 @@ async function sendChat() {
     if(data.ok){
       addAI(data.text);
       if(data.instruments&&data.instruments.length>0){
-        const hasPct=data.instruments.some(i=>i.pct>0);
-        if(hasPct) renderPie(data.instruments);
-        data.instruments.forEach(inst=>renderLine(inst));
+        const realInsts = data.instruments.filter(i=>i.pct>0);
+        const projection = data.instruments.find(i=>i.name==='Proyeccion total'||i.pct===0&&i.data&&i.data.length>12);
+        if(realInsts.length>0) renderPie(realInsts);
+        realInsts.forEach(inst=>renderLine(inst));
+        if(projection) renderProjection(projection);
       }
     } else { addAI('Hubo un error. Intentá de nuevo.'); }
   } catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error de conexión.');}
@@ -512,6 +516,47 @@ function renderPie(instruments) {
   </div>`;
   msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
   setTimeout(()=>{new Chart(document.getElementById(cid).getContext('2d'),{type:'doughnut',data:{datasets:[{data:instruments.map(i=>i.pct),backgroundColor:PIE_COLORS.slice(0,instruments.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},cutout:'58%'}});},100);
+}
+
+function renderProjection(inst) {
+  if(!inst.data||inst.data.length===0) return;
+  const msgs=document.getElementById('chat-messages');
+  const wrap=document.createElement('div');
+  wrap.className='msg msg-ai';
+  const cid='proj'+Date.now();
+  const startVal=inst.data[0];
+  const endVal=inst.data[inst.data.length-1];
+  const growth=((endVal-startVal)/startVal*100).toFixed(0);
+  wrap.innerHTML=`<div class="msg-avatar">✦</div><div class="msg-bubble" style="padding:0;border:none;background:transparent;max-width:100%;width:100%;">
+    <div class="line-card" style="border-color:#6C47FF22;background:linear-gradient(135deg,#F9F7FF,#fff);">
+      <div class="line-card-header">
+        <div class="line-card-name" style="color:var(--purple);">📈 Proyección a 24 meses</div>
+        <span class="trend-badge trend-up">+${growth}% estimado</span>
+      </div>
+      <div class="line-card-desc" style="color:var(--purple-dark);">${inst.description||'Crecimiento proyectado de tu capital con esta cartera'}</div>
+      <div class="line-chart-wrap" style="height:120px;"><canvas id="${cid}"></canvas></div>
+    </div>
+  </div>`;
+  msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+  setTimeout(()=>{
+    new Chart(document.getElementById(cid).getContext('2d'),{
+      type:'line',
+      data:{labels:inst.labels||[],datasets:[{
+        data:inst.data,
+        borderColor:'#6C47FF',
+        backgroundColor:'rgba(108,71,255,0.08)',
+        borderWidth:2.5,fill:true,tension:0.4,pointRadius:0,
+        pointHoverRadius:5,pointHoverBackgroundColor:'#6C47FF'
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'USD '+ctx.parsed.y.toLocaleString('es-AR')}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9},color:'#9CA3AF',maxTicksLimit:8}},
+          y:{grid:{color:'#F3F4F6'},ticks:{font:{size:9},color:'#9CA3AF',callback:v=>'$'+v}}
+        }
+      }
+    });
+  },120);
 }
 
 function renderLine(inst) {
