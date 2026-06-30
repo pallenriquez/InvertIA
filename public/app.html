@@ -426,15 +426,16 @@ async function sendChat() {
     showTyping();
     setTimeout(()=>{
       removeTyping();
-      addAI('¿Cuál es tu objetivo financiero principal? Por ejemplo: ahorrar para el retiro, comprar una casa, armar un fondo de emergencia, un viaje, o simplemente hacer crecer tus ahorros.');
+      addAI('¿Cuál es tu objetivo financiero principal? Por ejemplo: comprar una casa, un auto, hacer un viaje, ahorrar para el retiro, o simplemente hacer crecer tus ahorros.');
       document.getElementById('chat-send-btn').disabled=false;
-    },600);
+    },800);
     return;
   }
 
   if (chatState==='await_objetivo') {
     userObjetivo=text;
     chatState='chatting';
+    showTyping(); // Show immediately before async operations
     // Save profile to DB
     await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:resultProfile.key,profileLabel:resultProfile.label,scores:resultScores,capital:userCapital,objetivo:userObjetivo})});
     // Update context bar
@@ -442,7 +443,6 @@ async function sendChat() {
     document.getElementById('ctx-objetivo').textContent=userObjetivo;
     document.getElementById('ctx-profile').textContent=resultProfile.label;
     document.getElementById('context-bar').style.display='flex';
-    showTyping();
     // Now send to AI with full context
     try {
       const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:resultProfile.label,scores:resultScores,capital:userCapital,objetivo:userObjetivo,message:`Tengo ${userCapital} para invertir y mi objetivo es ${userObjetivo}. En base a mi perfil y el mercado actual, dame una cartera concreta con porcentajes, explicacion de cada instrumento y proyeccion.`})});
