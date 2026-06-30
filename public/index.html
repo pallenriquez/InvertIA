@@ -40,7 +40,7 @@
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; border: none; }
   .btn-outline { background: transparent; border: 1.5px solid #E5E7EB; color: var(--text); }
   .btn-outline:hover { border-color: var(--purple); color: var(--purple); }
-  .btn-primary { background: var(--purple); color: white; }
+  .btn-primary, .btn-primary:visited { background: var(--purple); color: white !important; }
   .btn-primary:hover { background: var(--purple-dark); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(108,71,255,0.3); }
   .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 12px; }
   .btn-green { background: var(--green); color: white; }
@@ -289,11 +289,34 @@
   .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
   .faq-answer-inner { padding-bottom: 1.5rem; font-size: 15px; color: var(--gray); line-height: 1.7; max-width: 640px; }
 
-  /* TESTIMONIOS */
-  .testimonials { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
-  .testimonial-card { background: var(--gray-light); border-radius: 16px; padding: 1.75rem; }
-  .testimonial-text { font-size: 15px; color: var(--text); line-height: 1.7; margin-bottom: 1.25rem; font-style: italic; }
+  /* TESTIMONIOS - CARRUSEL */
+  .testi-carousel { position: relative; margin-top: 3rem; overflow: hidden; }
+  .testi-track { display: flex; gap: 1.5rem; transition: transform 0.5s ease; will-change: transform; }
+  .testimonial-card {
+    background: white; border: 1px solid #E5E7EB; border-radius: 16px; padding: 1.75rem;
+    flex: 0 0 calc(33.333% - 1rem); min-width: 280px;
+  }
+  .testimonial-text { font-size: 15px; color: var(--text); line-height: 1.7; margin-bottom: 1.25rem; }
   .testimonial-author { display: flex; align-items: center; gap: 10px; }
+  .testi-controls { display: flex; justify-content: center; gap: 10px; margin-top: 2rem; }
+  .testi-dot { width: 8px; height: 8px; border-radius: 50%; background: #D1D5DB; cursor: pointer; transition: all 0.2s; border: none; padding: 0; }
+  .testi-dot.active { background: var(--purple); width: 22px; border-radius: 4px; }
+  .testi-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+    width: 38px; height: 38px; border-radius: 50%; background: white; border: 1px solid #E5E7EB;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; color: var(--text);
+    transition: all 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .testi-arrow:hover { border-color: var(--purple); color: var(--purple); }
+  .testi-arrow.prev { left: -19px; }
+  .testi-arrow.next { right: -19px; }
+  @media (max-width: 900px) {
+    .testimonial-card { flex: 0 0 calc(50% - 0.75rem); }
+  }
+  @media (max-width: 600px) {
+    .testimonial-card { flex: 0 0 100%; }
+    .testi-arrow { display: none; }
+  }
   .author-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--purple); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
   .author-name { font-size: 14px; font-weight: 600; color: var(--dark); }
   .author-role { font-size: 13px; color: var(--gray); }
@@ -310,7 +333,7 @@
   footer strong { color: white; }
 
   /* DISCLAIMER */
-  .disclaimer-bar { background: #FEF3C7; border-top: 1px solid #FDE68A; padding: 0.75rem 2rem; text-align: center; font-size: 12px; color: #92400E; }
+  .disclaimer-bar { background: var(--dark2); border-top: 1px solid rgba(255,255,255,0.08); padding: 0.85rem 2rem; text-align: center; font-size: 12.5px; color: #9CA3AF; }
 
   @media (max-width: 600px) {
     nav { padding: 1rem; }
@@ -547,7 +570,7 @@
           <span class="faq-icon"></span>
         </button>
         <div class="faq-answer">
-          <div class="faq-answer-inner">Te damos una recomendación concreta con instrumentos, porcentajes y proyecciones basadas en tu perfil, tu capital y tu objetivo. Es contenido educativo pensado para que decidas con información clara, no asesoramiento financiero regulado. La decisión final siempre es tuya.</div>
+          <div class="faq-answer-inner">Te damos una recomendación concreta con instrumentos, porcentajes y proyecciones basadas en tu perfil, tu capital y tu objetivo. Es contenido educativo para que decidas con información clara: no reemplaza a un asesor financiero matriculado. La decisión final siempre es tuya.</div>
         </div>
       </div>
       <div class="faq-item">
@@ -604,32 +627,61 @@
   <div class="section-inner">
     <div class="section-tag">Testimonios</div>
     <h2 class="section-title">Lo que dicen nuestros usuarios</h2>
-    <div class="testimonials">
-      <div class="testimonial-card">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Nunca había invertido y no sabía por dónde empezar. InvertIA me explicó todo de forma clara y ahora tengo mi primer plazo fijo en USD."</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">MG</div>
-          <div><div class="author-name">Martina García</div><div class="author-role">Diseñadora, Buenos Aires</div></div>
+    <div class="testi-carousel">
+      <button class="testi-arrow prev" onclick="moveTesti(-1)">‹</button>
+      <button class="testi-arrow next" onclick="moveTesti(1)">›</button>
+      <div class="testi-track" id="testi-track">
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Yo no tenía ni idea de plazo fijo ni de bonos. Le dije que quería juntar para mi primer auto y me explicó todo como si me lo contara un amigo que sabe del tema. Ya tengo mi primera inversión en dólares.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">MG</div>
+            <div><div class="author-name">Martina García</div><div class="author-role">Diseñadora, Buenos Aires</div></div>
+          </div>
         </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Le conté que quiero comprarme un auto en dos años y me armó una cartera pensada para eso, con números concretos. Es otra cosa."</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">FL</div>
-          <div><div class="author-name">Federico López</div><div class="author-role">Contador, Córdoba</div></div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Le conté que quiero comprarme un auto en dos años y me armó una cartera pensada para eso, con números reales y dos escenarios. Es lo que necesitaba para dejar de postergarlo.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">FL</div>
+            <div><div class="author-name">Federico López</div><div class="author-role">Contador, Córdoba</div></div>
+          </div>
         </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Vuelvo cada mes y se acuerda de todo lo que hablamos antes. Siento que tengo un asesor de verdad, no un chatbot genérico."</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">SV</div>
-          <div><div class="author-name">Sofía Vera</div><div class="author-role">Emprendedora, Rosario</div></div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Vuelvo cada mes y se acuerda de todo lo que hablamos antes, hasta de mi objetivo del viaje. Siento que tengo un asesor de verdad siguiendo mi caso, no un chatbot que arranca de cero cada vez.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">SV</div>
+            <div><div class="author-name">Sofía Vera</div><div class="author-role">Emprendedora, Rosario</div></div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Tenía unos ahorros en el banco sin hacer nada y no sabía ni por dónde arrancar. En una charla de diez minutos entendí en qué estaba parado y armé mi primera cartera diversificada.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">JR</div>
+            <div><div class="author-name">Joaquín Ríos</div><div class="author-role">Desarrollador, Mendoza</div></div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Lo que más me gustó es que no me vendió humo. Me dijo clarito que con mi capital actual el objetivo me iba a llevar más tiempo del que pensaba, y me sugirió cómo achicar ese plazo.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">CP</div>
+            <div><div class="author-name">Camila Paz</div><div class="author-role">Profesora, Tucumán</div></div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">Probé otras apps antes y todas tiraban recomendaciones genéricas. Esta me preguntó mi objetivo real antes de sugerirme nada, y eso cambia todo.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">NA</div>
+            <div><div class="author-name">Nicolás Acosta</div><div class="author-role">Comerciante, Rosario</div></div>
+          </div>
         </div>
       </div>
     </div>
+    <div class="testi-controls" id="testi-dots"></div>
   </div>
 </section>
 
@@ -641,7 +693,7 @@
 </section>
 
 <div class="disclaimer-bar">
-  ⚠️ InvertIA brinda contenido educativo e informativo. No constituye asesoramiento financiero profesional. Consultá a un asesor certificado antes de invertir.
+  ⚠️ InvertIA brinda contenido educativo e informativo. No constituye asesoramiento financiero profesional.
 </div>
 
 <footer>
@@ -722,7 +774,62 @@ const chartObserver = new IntersectionObserver((entries) => {
 
 const chartWrap = document.querySelector('.chart-svg-wrap');
 if (chartWrap) chartObserver.observe(chartWrap);
+
+// Testimonials carousel
+(function() {
+  const track = document.getElementById('testi-track');
+  const dotsWrap = document.getElementById('testi-dots');
+  const cards = track.children.length;
+  let perView = window.innerWidth <= 600 ? 1 : window.innerWidth <= 900 ? 2 : 3;
+  let index = 0;
+  let autoTimer;
+
+  function maxIndex() { return Math.max(0, cards - perView); }
+
+  function renderDots() {
+    dotsWrap.innerHTML = '';
+    const totalDots = maxIndex() + 1;
+    for (let i = 0; i < totalDots; i++) {
+      const dot = document.createElement('button');
+      dot.className = 'testi-dot' + (i === index ? ' active' : '');
+      dot.onclick = () => { index = i; update(); resetAuto(); };
+      dotsWrap.appendChild(dot);
+    }
+  }
+
+  function update() {
+    const cardWidth = track.children[0].getBoundingClientRect().width;
+    const gap = 24;
+    track.style.transform = `translateX(-${index * (cardWidth + gap)}px)`;
+    renderDots();
+  }
+
+  window.moveTesti = function(dir) {
+    index = Math.min(Math.max(0, index + dir), maxIndex());
+    update();
+    resetAuto();
+  };
+
+  function autoAdvance() {
+    index = index >= maxIndex() ? 0 : index + 1;
+    update();
+  }
+
+  function resetAuto() {
+    clearInterval(autoTimer);
+    autoTimer = setInterval(autoAdvance, 5000);
+  }
+
+  window.addEventListener('resize', () => {
+    perView = window.innerWidth <= 600 ? 1 : window.innerWidth <= 900 ? 2 : 3;
+    index = Math.min(index, maxIndex());
+    update();
+  });
+
+  update();
+  resetAuto();
+})();
 </script>
 
 </body>
-</html></html>
+</html>
