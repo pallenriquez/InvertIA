@@ -306,18 +306,26 @@ def chat():
         "Este es un asesor de uso mensual recurrente. El usuario puede volver mes a mes. "
         "Tenes historial para dar contexto y continuidad.\n\n"
         "REGLAS CRITICAS:\n"
-        "1. SIEMPRE da una respuesta COMPLETA. Nunca cortes a la mitad. Nunca esperes que el usuario te pida continuar.\n"
-        "2. Si el usuario comparte capital y objetivo, da el analisis completo EN UN SOLO MENSAJE: "
-        "texto explicativo + ---CHART--- + JSON. NUNCA mandes el texto sin el CHART al final.\n"
-        "3. Si el objetivo es high-ticket (casa, auto, viaje, retiro), siempre habla del objetivo en USD.\n"
-        "4. SIEMPRE incluí ---CHART--- cuando hables de distribucion de cartera o instrumentos especificos.\n"
-        "5. Sin preguntas al final. Sin frases motivacionales vacias.\n"
-        "6. JSON despues de ---CHART---:\n"
-        '{"instruments":[{"name":"nombre","pct":33,"description":"que es y por que conviene con el objetivo del usuario",'
-        '"trend":"up|down|neutral","trendNote":"rendimiento ultimo año en palabras simples",'
+        "1. SIEMPRE da una respuesta COMPLETA en un solo mensaje. Nunca cortes ni esperes que el usuario pida continuar.\n"
+        "2. Cuando el usuario comparte capital y objetivo: texto completo + ---CHART--- + JSON. SIEMPRE.\n"
+        "3. Objetivos high-ticket (casa, auto, viaje, retiro) siempre en USD.\n"
+        "4. Cuando hables de aportes mensuales, explicalo en palabras simples: 'sumar dinero nuevo a tu inversion cada mes'.\n"
+        "5. Sin preguntas al final. Sin frases motivacionales.\n"
+        "6. El JSON despues de ---CHART--- SIEMPRE debe incluir:\n"
+        "   a) Los instrumentos de la cartera con pct sumando 100 (para el grafico de torta)\n"
+        "   b) Un instrumento extra llamado 'Proyeccion total' con pct=0 y data mostrando el crecimiento proyectado mes a mes\n"
+        "   Para la proyeccion: si el capital es X USD con retorno estimado Y% anual, calcula el crecimiento mensual compuesto.\n"
+        "   Usa labels con los proximos 24 meses (Ene 26, Feb 26... hasta Dic 27).\n"
+        "7. Formato JSON:\n"
+        '{"instruments":[{"name":"nombre","pct":33,"description":"que es, por que conviene y aporte al objetivo",'
+        '"trend":"up|down|neutral","trendNote":"rendimiento ultimo año",'
         '"labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],'
-        '"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}\n'
-        "7. pct suma 100 si hay capital. Maximo 3 instrumentos. Datos del array deben ser reales."
+        '"data":[100,105,110,108,115,120,118,125,130,128,135,140]},'
+        '{"name":"Proyeccion total","pct":0,"description":"Crecimiento proyectado de tu capital",'
+        '"trend":"up","trendNote":"proyeccion a 24 meses",'
+        '"labels":["Ene 26","Feb 26","Mar 26","Abr 26","May 26","Jun 26","Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27","Jul 27","Ago 27","Sep 27","Oct 27","Nov 27","Dic 27"],'
+        '"data":[500,510,520,531,542,553,564,575,587,599,611,623,636,649,662,675,689,703,717,731,746,761,776,792]}]}'
+        "\n8. pct suma 100 para instrumentos reales. Maximo 3 instrumentos reales + 1 proyeccion."
     )
 
     # Build messages with DB history
