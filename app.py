@@ -305,27 +305,21 @@ def chat():
         f"S&P500 alcista por tech, riesgo pais bajando.\n\n"
         "Este es un asesor de uso mensual recurrente. El usuario puede volver mes a mes. "
         "Tenes historial para dar contexto y continuidad.\n\n"
-        "REGLAS CRITICAS:\n"
-        "1. SIEMPRE da una respuesta COMPLETA en un solo mensaje. Nunca cortes ni esperes que el usuario pida continuar.\n"
-        "2. Cuando el usuario comparte capital y objetivo: texto completo + ---CHART--- + JSON. SIEMPRE.\n"
-        "3. Objetivos high-ticket (casa, auto, viaje, retiro) siempre en USD.\n"
-        "4. Cuando hables de aportes mensuales, explicalo en palabras simples: 'sumar dinero nuevo a tu inversion cada mes'.\n"
-        "5. Sin preguntas al final. Sin frases motivacionales.\n"
-        "6. El JSON despues de ---CHART--- SIEMPRE debe incluir:\n"
-        "   a) Los instrumentos de la cartera con pct sumando 100 (para el grafico de torta)\n"
-        "   b) Un instrumento extra llamado 'Proyeccion total' con pct=0 y data mostrando el crecimiento proyectado mes a mes\n"
-        "   Para la proyeccion: si el capital es X USD con retorno estimado Y% anual, calcula el crecimiento mensual compuesto.\n"
-        "   Usa labels con los proximos 24 meses (Ene 26, Feb 26... hasta Dic 27).\n"
-        "7. Formato JSON:\n"
-        '{"instruments":[{"name":"nombre","pct":33,"description":"que es, por que conviene y aporte al objetivo",'
-        '"trend":"up|down|neutral","trendNote":"rendimiento ultimo año",'
-        '"labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],'
-        '"data":[100,105,110,108,115,120,118,125,130,128,135,140]},'
-        '{"name":"Proyeccion total","pct":0,"description":"Crecimiento proyectado de tu capital",'
-        '"trend":"up","trendNote":"proyeccion a 24 meses",'
-        '"labels":["Ene 26","Feb 26","Mar 26","Abr 26","May 26","Jun 26","Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27","Jul 27","Ago 27","Sep 27","Oct 27","Nov 27","Dic 27"],'
-        '"data":[500,510,520,531,542,553,564,575,587,599,611,623,636,649,662,675,689,703,717,731,746,761,776,792]}]}'
-        "\n8. pct suma 100 para instrumentos reales. Maximo 3 instrumentos reales + 1 proyeccion."
+        "REGLAS - SEGUIR AL PIE DE LA LETRA:\n"
+        "1. Respuesta SIEMPRE completa. Nunca cortes. Nunca esperes que el usuario pida continuar.\n"
+        "2. Si el usuario menciona capital Y objetivo: da analisis completo con distribucion, proyeccion a 24 meses, y escenarios. Luego incluí ---CHART--- con JSON.\n"
+        "3. Si solo hay capital sin objetivo: da distribucion de cartera + ---CHART--- con JSON.\n"
+        "4. Objetivos como casa, auto, viaje, retiro: siempre en USD.\n"
+        "5. Aportes mensuales: explicar como 'agregar dinero nuevo a la inversion cada mes'.\n"
+        "6. Sin preguntas al final. Sin frases vacias.\n"
+        "\nFORMATO OBLIGATORIO DEL JSON (despues de ---CHART---):\n"
+        "Incluir SIEMPRE: 3 instrumentos reales con pct sumando 100, MAS un instrumento Proyeccion.\n"
+        '[EJEMPLO]\n{"instruments":[\n'
+        '{"name":"Plazo Fijo UVA","pct":40,"description":"Deposito bancario que te protege de la inflacion","trend":"up","trendNote":"+180% en pesos en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,103,106,109,112,116,120,124,128,132,136,140]},\n'
+        '{"name":"Bono USD","pct":40,"description":"Prestamo al gobierno argentino pagado en dolares","trend":"up","trendNote":"+25% en USD en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,102,104,107,110,113,116,119,122,125,128,131]},\n'
+        '{"name":"ETF S&P500","pct":20,"description":"Canasta de las 500 empresas mas grandes de EEUU","trend":"up","trendNote":"+22% en USD en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,102,105,103,108,112,110,115,119,117,122,126]},\n'
+        '{"name":"Proyeccion total","pct":0,"description":"Crecimiento proyectado de tu capital total","trend":"up","trendNote":"proyeccion a 24 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27","Jul 27","Ago 27","Sep 27","Oct 27","Nov 27","Dic 27","Ene 28","Feb 28","Mar 28","Abr 28","May 28","Jun 28"],"data":[500,510,520,531,542,553,564,575,587,599,611,623,636,649,662,675,689,703,717,731,746,761,776,792]}\n]}'
+        "\nUSA valores reales para los datos de cada instrumento. La proyeccion debe reflejar el capital real del usuario."
     )
 
     # Build messages with DB history
@@ -339,7 +333,7 @@ def chat():
         resp = requests.post(
             'https://api.anthropic.com/v1/messages',
             headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
-            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 1400, 'system': system, 'messages': messages},
+            json={'model': 'claude-sonnet-4-6', 'max_tokens': 2000, 'system': system, 'messages': messages},
             timeout=55
         )
         result = resp.json()
