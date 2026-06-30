@@ -143,20 +143,23 @@ def recommend():
     capital = data.get('capital', 'no especificado')
     name = user['name']
 
-    prompt = f"""Sos un asesor financiero argentino. Usás el voseo. Breve y directo.
+    prompt = f"""Sos un asesor financiero argentino que habla con personas que NO saben de finanzas. Usás el voseo. Sos cálido, simple y directo. Evitás la jerga técnica. Si usás un término financiero, lo explicás en una palabra entre paréntesis.
 
-Usuario: {name}, perfil {profile}, capital {capital}.
+Usuario: {name}, perfil {profile}.
 Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.
-Mercado actual (jun 2026): inflación ~2.3% mensual, dólar en bandas ($1757 techo), Merval volátil por MSCI, S&P500 alcista por IA, riesgo país bajando.
+Mercado actual (jun 2026): inflación bajando al 2.3% mensual, dólar estable, bolsa argentina volátil, mercado americano subiendo por el boom de la IA, riesgo país en baja.
 
 Respondé en DOS partes separadas por ---INSTRUMENTS---
 
-PARTE 1 (máximo 150 palabras, sin asteriscos):
-Saludá a {name}, validá su perfil, contá brevemente el mercado, recomendá 3 instrumentos concretos con porcentajes según capital {capital}, cerrá con frase motivadora.
+PARTE 1 (máximo 120 palabras, sin asteriscos, sin markdown):
+- Saludá a {name} por nombre de forma breve y cálida
+- En 1-2 oraciones simples contá cómo está el mercado hoy, como si se lo explicaras a un amigo
+- Recomendá 3 instrumentos con una oración cada uno explicando QUÉ ES y POR QUÉ le conviene, en lenguaje simple
+- Cerrá con una frase corta y motivadora
 
-PARTE 2: solo JSON válido:
-{{"instruments":[{{"name":"nombre","category":"tipo","type":"conservador|moderado|arriesgado","description":"1 oración","trend":"up|down|neutral","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140],"unit":"$"}}],"macro":"1 oración sobre riesgo macro relevante."}}
-Incluí 3 instrumentos en el array. Los datos deben reflejar tendencias reales del último año."""
+PARTE 2: solo JSON válido sin texto extra:
+{{"instruments":[{{"name":"nombre corto","category":"tipo simple (ej: Bono, Acción, Fondo)","type":"conservador|moderado|arriesgado","description":"qué es en palabras simples y por qué conviene","trend":"up|down|neutral","trendNote":"cómo le fue en el último año en palabras simples","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140],"unit":"$"}}],"macro":"1 oración simple sobre algo del contexto que puede afectar estas inversiones."}}
+Incluí exactamente 3 instrumentos. Los datos deben reflejar tendencias reales del último año."""
 
     try:
         resp = requests.post(
@@ -250,13 +253,19 @@ def chat():
     is_capital = data.get('isCapital', False)
     message = data.get('message', '')
 
-    system = f"""Sos un asesor financiero argentino experto. Usás el voseo. Sos claro, directo y profesional pero cercano.
+    system = f"""Sos un asesor financiero argentino que habla con personas que NO saben de finanzas. Usás el voseo. Sos cálido, simple y directo. Nunca usás jerga sin explicarla. Sin asteriscos ni markdown.
 Perfil del usuario: {profile}. Distribución: Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.
-Mercado actual (jun 2026): inflación ~2.3% mensual, dólar en bandas ($1757 techo), Merval volátil por MSCI, S&P500 alcista por IA, riesgo país bajando.
+Mercado actual (jun 2026): inflación ~2.3% mensual, dólar estable en bandas, bolsa argentina volátil, S&P500 subiendo por IA, riesgo país bajando.
 
-{'El usuario acaba de decirte con cuánto capital cuenta. Respondé con: 1) una línea diciendo cómo distribuirías ese capital en porcentajes concretos, 2) breve descripción de cada instrumento recomendado (máx 2 líneas c/u), 3) una observación sobre el contexto macro relevante. Sé concreto y sin rodeos. No uses asteriscos ni markdown. Después del texto, escribí ---INSTRUMENTS--- y un JSON con esta estructura: {"instruments":[{"name":"nombre","pct":40,"description":"1 oración","trend":"up|down|neutral","trendNote":"texto corto","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}'
-if is_capital else
-'Respondé la consulta del usuario de forma clara y breve. Si pregunta por un instrumento específico, explicalo simple. Si pregunta por el mercado, contextualizá. Máximo 3-4 párrafos cortos. Sin asteriscos ni markdown.'}"""
+""" + ("""El usuario te acaba de decir con cuánto capital cuenta. Respondé así:
+1) Una oración cálida reconociendo el capital (ej: "Con ese monto ya podés armar algo interesante")
+2) Cómo distribuirías ese capital en porcentajes concretos y simples (ej: "40% en X, 40% en Y, 20% en Z")
+3) Para cada instrumento: 1 oración explicando qué es en palabras simples y por qué le conviene con ese capital
+4) Una oración de cierre motivadora
+Sin asteriscos. Sin markdown. Máximo 150 palabras.
+Después del texto escribí ---INSTRUMENTS--- y un JSON:
+{"instruments":[{"name":"nombre","pct":40,"description":"qué es en palabras simples","trend":"up|down|neutral","trendNote":"cómo le fue el último año","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,105,110,108,115,120,118,125,130,128,135,140]}]}
+Incluí exactamente 3 instrumentos con pct que sumen 100.""" if is_capital else """Respondé la consulta de forma simple y breve, como si le explicaras a alguien que nunca invirtió. Si pregunta por un instrumento, explicá QUÉ ES primero. Máximo 3 párrafos cortos. Sin asteriscos ni markdown.""")"""
 
     messages = []
     for h in history[-6:]:
