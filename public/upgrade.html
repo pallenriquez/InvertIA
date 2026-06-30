@@ -87,7 +87,7 @@ async function activatePaid() {
   const data = await res.json();
   if (data.ok) {
     document.getElementById('success').style.display = 'block';
-    setTimeout(() => window.location.href = '/app', 1500);
+    setTimeout(() => window.location.href = '/app?upgraded=1', 1500);
   }
 }
 </script>
