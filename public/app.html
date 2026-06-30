@@ -445,7 +445,7 @@ async function sendChat() {
     showTyping();
     // Now send to AI with full context
     try {
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:resultProfile.label,scores:resultScores,capital:userCapital,objetivo:userObjetivo,message:`Mi capital es ${userCapital} y mi objetivo es ${userObjetivo}. Dame una cartera personalizada.`})});
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:resultProfile.label,scores:resultScores,capital:userCapital,objetivo:userObjetivo,message:`Tengo ${userCapital} para invertir y mi objetivo es ${userObjetivo}. En base a mi perfil y el mercado actual, dame una cartera concreta con porcentajes, explicacion de cada instrumento y proyeccion.`})});
       const data=await res.json();
       removeTyping();
       document.getElementById('chat-send-btn').disabled=false;
