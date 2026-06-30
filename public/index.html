@@ -290,7 +290,8 @@
   .faq-answer-inner { padding-bottom: 1.5rem; font-size: 15px; color: var(--gray); line-height: 1.7; max-width: 640px; }
 
   /* TESTIMONIOS - CARRUSEL */
-  .testi-carousel { position: relative; margin-top: 3rem; overflow: hidden; }
+  .testi-carousel { position: relative; margin-top: 3rem; padding: 0 50px; }
+  .testi-track-wrap { overflow: hidden; }
   .testi-track { display: flex; gap: 1.5rem; transition: transform 0.5s ease; will-change: transform; }
   .testimonial-card {
     background: white; border: 1px solid #E5E7EB; border-radius: 16px; padding: 1.75rem;
@@ -303,19 +304,20 @@
   .testi-dot.active { background: var(--purple); width: 22px; border-radius: 4px; }
   .testi-arrow {
     position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
-    width: 38px; height: 38px; border-radius: 50%; background: white; border: 1px solid #E5E7EB;
-    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; color: var(--text);
-    transition: all 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    width: 42px; height: 42px; border-radius: 50%; background: white; border: 1.5px solid #D1D5DB;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; color: var(--dark);
+    transition: all 0.2s; box-shadow: 0 4px 14px rgba(0,0,0,0.1); line-height: 1;
   }
-  .testi-arrow:hover { border-color: var(--purple); color: var(--purple); }
-  .testi-arrow.prev { left: -19px; }
-  .testi-arrow.next { right: -19px; }
+  .testi-arrow:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-light); }
+  .testi-arrow.prev { left: 0; }
+  .testi-arrow.next { right: 0; }
   @media (max-width: 900px) {
     .testimonial-card { flex: 0 0 calc(50% - 0.75rem); }
   }
   @media (max-width: 600px) {
+    .testi-carousel { padding: 0 8px; }
     .testimonial-card { flex: 0 0 100%; }
-    .testi-arrow { display: none; }
+    .testi-arrow { width: 34px; height: 34px; font-size: 16px; }
   }
   .author-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--purple); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
   .author-name { font-size: 14px; font-weight: 600; color: var(--dark); }
@@ -355,9 +357,9 @@
   <div class="logo">Invert<span>IA</span></div>
   <div class="nav-links">
     <a href="#como-funciona">Cómo funciona</a>
-    <a href="#diversificar">Diversificación</a>
     <a href="#precios">Precios</a>
-    <a href="#faq">Preguntas</a>
+    <a href="#faq">Preguntas frecuentes</a>
+    <a href="#testimonios">Testimonios</a>
     <a href="/login" class="btn btn-outline">Iniciar sesión</a>
     <a href="/register" class="btn btn-primary">Empezar gratis</a>
   </div>
@@ -368,7 +370,7 @@
   <div class="hero-content">
     <div class="hero-badge">Asesoramiento financiero impulsado por IA</div>
     <h1>Invertí mejor con tu <span>asesor IA</span> personal</h1>
-    <p>Descubrí tu perfil inversor, contanos tu objetivo, y recibí una cartera personalizada con proyecciones reales. Mes a mes, tu asesor recuerda dónde estás parado.</p>
+    <p>Descubrí tu perfil inversor, contanos tu objetivo, y recibí una cartera personalizada con proyecciones reales. Tu asesor guarda el historial de cada conversación para acompañarte mes a mes.</p>
     <div class="hero-ctas">
       <a href="/register" class="btn btn-primary btn-lg">Probar demo gratis →</a>
       <a href="#como-funciona" class="btn btn-outline btn-lg" style="color:white;border-color:rgba(255,255,255,0.3);">Ver cómo funciona</a>
@@ -459,7 +461,7 @@
     <div class="diversify-text">
       <div class="section-tag">Diversificación</div>
       <h2>Tener una cartera diversificada <span>ahora es posible</span></h2>
-      <p>Antes necesitabas un asesor caro o años de experiencia para repartir tu capital entre distintos instrumentos. Hoy lo armamos juntos en minutos, con datos reales del mercado y una proyección clara de hacia dónde va tu dinero.</p>
+      <p>Antes necesitabas un asesor financiero tradicional o años de experiencia para repartir tu capital entre distintos instrumentos. Hoy lo armamos juntos en minutos, con datos reales del mercado y una proyección clara de hacia dónde va tu dinero.</p>
       <div class="diversify-counters">
         <div class="counter-box">
           <div class="counter-num" data-target="3" data-suffix="">0</div>
@@ -623,13 +625,14 @@
 </section>
 
 <!-- TESTIMONIOS -->
-<section class="section" style="background:var(--gray-light);">
+<section class="section" id="testimonios" style="background:var(--gray-light);">
   <div class="section-inner">
     <div class="section-tag">Testimonios</div>
     <h2 class="section-title">Lo que dicen nuestros usuarios</h2>
     <div class="testi-carousel">
       <button class="testi-arrow prev" onclick="moveTesti(-1)">‹</button>
       <button class="testi-arrow next" onclick="moveTesti(1)">›</button>
+      <div class="testi-track-wrap">
       <div class="testi-track" id="testi-track">
         <div class="testimonial-card">
           <div class="stars">★★★★★</div>
@@ -679,6 +682,7 @@
             <div><div class="author-name">Nicolás Acosta</div><div class="author-role">Comerciante, Rosario</div></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
     <div class="testi-controls" id="testi-dots"></div>
