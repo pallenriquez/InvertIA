@@ -398,7 +398,7 @@ async function fetchInitial() {
   if (data.ok) {
     addAI(data.text);
     setTimeout(()=>{
-      addAI('¿Con cuánto capital contás para invertir?');
+      addAI('¿Con cuánto capital mensual contás para invertir? Podés decirme en pesos o dólares.');
       chatState='await_capital';
       showChatInput();
       if(data.plan!=='paid'&&data.demoUsed>=1){document.getElementById('demo-limit-box').style.display='block';hideChatInput();}
@@ -455,8 +455,10 @@ async function sendChat() {
           const realInsts=data.instruments.filter(i=>i.pct>0);
           const projection=data.instruments.find(i=>i.name==='Proyeccion total'||(i.pct===0&&i.data&&i.data.length>12));
           if(realInsts.length>0) renderPie(realInsts);
-          realInsts.forEach(inst=>renderLine(inst));
-          if(projection) renderProjection(projection);
+          realInsts.forEach((inst,idx)=>{
+            setTimeout(()=>renderInstrumentWithChart(inst), idx*80);
+          });
+          if(projection) setTimeout(()=>renderProjection(projection), realInsts.length*80+80);
         }
       } else { addAI('Hubo un error. Intentá de nuevo.'); }
     } catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error de conexión.');}
@@ -474,10 +476,13 @@ async function sendChat() {
       addAI(data.text);
       if(data.instruments&&data.instruments.length>0){
         const realInsts = data.instruments.filter(i=>i.pct>0);
-        const projection = data.instruments.find(i=>i.name==='Proyeccion total'||i.pct===0&&i.data&&i.data.length>12);
+        const projection = data.instruments.find(i=>i.name==='Proyeccion total'||(i.pct===0&&i.data&&i.data.length>12));
+        // Show pie first, then each instrument with its line chart interleaved
         if(realInsts.length>0) renderPie(realInsts);
-        realInsts.forEach(inst=>renderLine(inst));
-        if(projection) renderProjection(projection);
+        realInsts.forEach((inst,idx)=>{
+          setTimeout(()=>renderInstrumentWithChart(inst), idx*80);
+        });
+        if(projection) setTimeout(()=>renderProjection(projection), realInsts.length*80+80);
       }
     } else { addAI('Hubo un error. Intentá de nuevo.'); }
   } catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error de conexión.');}
@@ -516,6 +521,44 @@ function renderPie(instruments) {
   </div>`;
   msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
   setTimeout(()=>{new Chart(document.getElementById(cid).getContext('2d'),{type:'doughnut',data:{datasets:[{data:instruments.map(i=>i.pct),backgroundColor:PIE_COLORS.slice(0,instruments.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},cutout:'58%'}});},100);
+}
+
+function renderInstrumentWithChart(inst) {
+  const msgs = document.getElementById('chat-messages');
+  // Description bubble
+  const descWrap = document.createElement('div');
+  descWrap.className = 'msg msg-ai';
+  const trendIcon = inst.trend==='up'?'↑':inst.trend==='down'?'↓':'→';
+  const trendClass = inst.trend==='up'?'trend-up':inst.trend==='down'?'trend-down':'trend-neutral';
+  descWrap.innerHTML = `<div class="msg-avatar">✦</div><div class="msg-bubble">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <strong style="font-size:14px;color:var(--dark)">${inst.name}</strong>
+      <span class="trend-badge ${trendClass}" style="font-size:11px;">${trendIcon} ${inst.trendNote||''}</span>
+    </div>
+    <span style="font-size:13.5px;color:var(--gray)">${inst.description||''}</span>
+  </div>`;
+  msgs.appendChild(descWrap);
+
+  // Line chart below
+  if (inst.data && inst.data.length > 0) {
+    const chartWrap = document.createElement('div');
+    chartWrap.className = 'msg msg-ai';
+    const cid = 'inst'+Date.now()+Math.random().toString(36).slice(2);
+    chartWrap.innerHTML = `<div style="width:32px;flex-shrink:0"></div><div class="line-card" style="max-width:88%;width:100%;margin-top:-8px;border-top-left-radius:4px;">
+      <div class="line-chart-wrap"><canvas id="${cid}"></canvas></div>
+    </div>`;
+    msgs.appendChild(chartWrap);
+    setTimeout(()=>{
+      const color = inst.trend==='up'?'#00C48C':inst.trend==='down'?'#EF4444':'#6C47FF';
+      new Chart(document.getElementById(cid).getContext('2d'),{
+        type:'line',
+        data:{labels:inst.labels||[],datasets:[{data:inst.data,borderColor:color,backgroundColor:color+'18',borderWidth:2,fill:true,tension:0.4,pointRadius:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9CA3AF',maxTicksLimit:6}},y:{grid:{color:'#F3F4F6'},ticks:{font:{size:9},color:'#9CA3AF'}}}}
+      });
+    },100);
+  }
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 function renderProjection(inst) {
