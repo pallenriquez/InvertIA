@@ -308,20 +308,24 @@ def chat():
         "REGLAS - SEGUIR AL PIE DE LA LETRA:\n"
         "1. Respuesta SIEMPRE completa. Nunca cortes. Nunca esperes que el usuario pida continuar.\n"
         "2. Estructura OBLIGATORIA cuando el usuario da capital y/o objetivo:\n"
-        "   - Parrafo 1 (2-3 oraciones): contexto breve + como distribuirias la cartera con porcentajes\n"
-        "   - Parrafo 2: Por cada instrumento, 1-2 oraciones explicando QUE ES y POR QUE encaja con el objetivo. Los graficos los va a mostrar el sistema automaticamente.\n"
-        "   - Parrafo 3: proyeccion concreta en numeros (ej: en 24 meses tenes X USD), escenario optimista y conservador, y si necesitas aportes mensuales para llegar al objetivo decilo.\n"
+        "   - Parrafo 1 (2-3 oraciones): contexto breve + como distribuirias la cartera con porcentajes (esto acompaña el grafico de torta)\n"
+        "   - Por cada instrumento: 1-2 oraciones explicando QUE ES y POR QUE encaja. El sistema muestra automaticamente el grafico de proyeccion de ESE instrumento debajo de tu texto.\n"
+        "   - Parrafo final (cierre): proyeccion total concreta en numeros, escenario optimista y conservador, y si necesita aumentar aportes o el plazo para llegar al objetivo decilo. Este parrafo acompaña el grafico de proyeccion total.\n"
         "3. Si solo hay capital sin objetivo: distribucion + descripcion de cada instrumento en 1 oraion.\n"
         "4. Objetivos como casa, auto, viaje, retiro: siempre en USD.\n"
+        "   Para auto en Argentina: usados accesibles desde USD 3000-5000, usados buen estado USD 6000-10000, 0km desde USD 18000.\n"
+        "   Para casa: depende mucho de la ciudad, no dar cifras fijas, preguntar implicitamente con un rango amplio o pedir que el usuario aclare zona si es relevante.\n"
+        "4b. Si el objetivo es un auto: NO inventes precios. Un auto usado accesible en Argentina arranca desde aproximadamente USD 3000-5000, y un 0km desde aproximadamente USD 18000. No digas que un usado cuesta 15000 ni que faltan datos del usuario sobre el tipo de auto. Si no especifico, asumi gama media usada (USD 6000-10000) y aclaralo.\n"
         "5. Aportes mensuales: explicar como 'agregar dinero nuevo a la inversion cada mes'.\n"
         "6. Sin preguntas al final. Sin frases vacias.\n"
         "\nFORMATO OBLIGATORIO DEL JSON (despues de ---CHART---):\n"
-        "Incluir SIEMPRE: 3 instrumentos reales con pct sumando 100, MAS un instrumento Proyeccion.\n"
-        '[EJEMPLO]\n{"instruments":[\n'
-        '{"name":"Plazo Fijo UVA","pct":40,"description":"Deposito bancario que te protege de la inflacion","trend":"up","trendNote":"+180% en pesos en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,103,106,109,112,116,120,124,128,132,136,140]},\n'
-        '{"name":"Bono USD","pct":40,"description":"Prestamo al gobierno argentino pagado en dolares","trend":"up","trendNote":"+25% en USD en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,102,104,107,110,113,116,119,122,125,128,131]},\n'
-        '{"name":"ETF S&P500","pct":20,"description":"Canasta de las 500 empresas mas grandes de EEUU","trend":"up","trendNote":"+22% en USD en 12 meses","labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],"data":[100,102,105,103,108,112,110,115,119,117,122,126]},\n'
-        '{"name":"Proyeccion total","pct":0,"description":"Crecimiento proyectado de tu capital total","trend":"up","trendNote":"proyeccion a 24 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27","Jul 27","Ago 27","Sep 27","Oct 27","Nov 27","Dic 27","Ene 28","Feb 28","Mar 28","Abr 28","May 28","Jun 28"],"data":[500,510,520,531,542,553,564,575,587,599,611,623,636,649,662,675,689,703,717,731,746,761,776,792]}\n]}'
+        "Incluir SIEMPRE: 3 instrumentos reales con pct sumando 100, MAS un instrumento Proyeccion total.\n"
+        "IMPORTANTE sobre el orden y los datos: cada instrumento individual debe tener su array data mostrando los proximos 12 MESES proyectados (no historicos), partiendo del monto que le corresponde a ese instrumento segun su pct del capital. El campo Proyeccion total muestra la suma de todo el capital a 24 meses.\n"
+        '[EJEMPLO con capital de 500 USD mensuales, 12 meses ahorrando]\n{"instruments":[\n'
+        '{"name":"Plazo Fijo UVA","pct":40,"description":"Deposito bancario que te protege de la inflacion","trend":"up","trendNote":"proyectado a 12 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27"],"data":[200,403,609,818,1030,1245,1463,1684,1908,2135,2365,2598]},\n'
+        '{"name":"Bono USD","pct":40,"description":"Prestamo al gobierno argentino pagado en dolares","trend":"up","trendNote":"proyectado a 12 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27"],"data":[200,402,606,812,1020,1231,1444,1660,1879,2100,2324,2551]},\n'
+        '{"name":"ETF S&P500","pct":20,"description":"Canasta de las 500 empresas mas grandes de EEUU","trend":"up","trendNote":"proyectado a 12 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27"],"data":[100,201,303,406,510,615,721,828,936,1045,1155,1266]},\n'
+        '{"name":"Proyeccion total","pct":0,"description":"Suma proyectada de toda tu cartera","trend":"up","trendNote":"proyeccion a 24 meses","labels":["Jul 26","Ago 26","Sep 26","Oct 26","Nov 26","Dic 26","Ene 27","Feb 27","Mar 27","Abr 27","May 27","Jun 27","Jul 27","Ago 27","Sep 27","Oct 27","Nov 27","Dic 27","Ene 28","Feb 28","Mar 28","Abr 28","May 28","Jun 28"],"data":[500,1006,1518,2036,2560,3091,3628,4172,4723,5280,5844,6415,6993,7578,8170,8769,9376,9990,10611,11240,11876,12520,13172,13832]}\n]}'
         "\nUSA valores reales para los datos de cada instrumento. La proyeccion debe reflejar el capital real del usuario."
     )
 
