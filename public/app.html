@@ -530,10 +530,11 @@ function renderInstrumentWithChart(inst) {
   descWrap.className = 'msg msg-ai';
   const trendIcon = inst.trend==='up'?'↑':inst.trend==='down'?'↓':'→';
   const trendClass = inst.trend==='up'?'trend-up':inst.trend==='down'?'trend-down':'trend-neutral';
+  const badgeText = inst.trendNote || (inst.trend==='up'?'proyección creciente':'proyección');
   descWrap.innerHTML = `<div class="msg-avatar">✦</div><div class="msg-bubble">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <strong style="font-size:14px;color:var(--dark)">${inst.name}</strong>
-      <span class="trend-badge ${trendClass}" style="font-size:11px;">${trendIcon} ${inst.trendNote||''}</span>
+      <strong style="font-size:14px;color:var(--dark)">${inst.name} <span style="font-weight:500;color:var(--purple);font-size:12px;">· ${inst.pct}%</span></strong>
+      <span class="trend-badge ${trendClass}" style="font-size:11px;">${trendIcon} ${badgeText}</span>
     </div>
     <span style="font-size:13.5px;color:var(--gray)">${inst.description||''}</span>
   </div>`;
@@ -645,7 +646,7 @@ if(new URLSearchParams(window.location.search).get('upgraded')==='1'){
     document.getElementById('restart-bar').style.display='none';
     document.getElementById('demo-limit-box').style.display='none';
     if(!resultProfile){resultProfile={key:'moderado',label:'⚖️ Moderado',desc:''};resultScores=[33,34,33];}
-    addAI('¡Ya tenés el plan Pro activo! ¿Con cuánto capital contás para invertir?');
+    addAI('¡Ya tenés el plan Pro activo! ¿Con cuánto capital mensual contás para invertir? Podés decirme en pesos o dólares.');
     chatState='await_capital';
     showChatInput();
   },400);
