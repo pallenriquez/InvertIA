@@ -307,8 +307,8 @@ def chat():
         "Tenes historial para dar contexto y continuidad.\n\n"
         "REGLAS CRITICAS:\n"
         "1. SIEMPRE da una respuesta COMPLETA. Nunca cortes a la mitad. Nunca esperes que el usuario te pida continuar.\n"
-        "2. Si el usuario comparte capital y objetivo, da el analisis completo: distribucion con porcentajes, "
-        "explicacion de cada instrumento, y proyeccion. Todo en un solo mensaje.\n"
+        "2. Si el usuario comparte capital y objetivo, da el analisis completo EN UN SOLO MENSAJE: "
+        "texto explicativo + ---CHART--- + JSON. NUNCA mandes el texto sin el CHART al final.\n"
         "3. Si el objetivo es high-ticket (casa, auto, viaje, retiro), siempre habla del objetivo en USD.\n"
         "4. SIEMPRE incluí ---CHART--- cuando hables de distribucion de cartera o instrumentos especificos.\n"
         "5. Sin preguntas al final. Sin frases motivacionales vacias.\n"
@@ -331,7 +331,7 @@ def chat():
         resp = requests.post(
             'https://api.anthropic.com/v1/messages',
             headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
-            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 900, 'system': system, 'messages': messages},
+            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 1400, 'system': system, 'messages': messages},
             timeout=55
         )
         result = resp.json()
