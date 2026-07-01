@@ -69,7 +69,8 @@ nav{background:var(--nav-bg);border-bottom:1px solid var(--border);display:flex;
 
 /* UPGRADE MODAL */
 .upgrade-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.upgrade-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:14px;padding:1.25rem;cursor:pointer;transition:all .2s;}
+.upgrade-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:14px;padding:1.25rem;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;}
+.upgrade-features{flex:1;}
 .upgrade-card:hover,.upgrade-card.selected{border-color:var(--purple);background:var(--purple-light);}
 [data-theme="dark"] .upgrade-card:hover,[data-theme="dark"] .upgrade-card.selected{background:rgba(108,71,255,.15);}
 .upgrade-card.advanced-card:hover,.upgrade-card.advanced-card.selected{border-color:var(--green);background:rgba(0,196,140,.1);}
@@ -236,8 +237,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 .btn-restart:hover{border-color:var(--purple);color:var(--purple);}
 
 /* SUPPORT */
-.support-fab{position:fixed;bottom:90px;right:24px;z-index:999;width:48px;height:48px;border-radius:50%;background:var(--dark);color:white;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
-[data-theme="dark"] .support-fab{background:#374151;}
+.support-fab{position:fixed;bottom:90px;right:24px;z-index:999;width:48px;height:48px;border-radius:50%;background:var(--purple);color:white;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(108,71,255,.4);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
 .support-fab:hover{transform:scale(1.08);}
 .support-panel{position:fixed;bottom:150px;right:24px;z-index:998;width:310px;max-height:440px;background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.15);display:flex;flex-direction:column;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
 .support-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:all;}
@@ -571,8 +571,12 @@ async function activatePlan(plan){
     if(userData)userData.plan=plan;
     document.getElementById('cfg-plan').textContent=plan==='advanced'?'Plan Advanced ⚡':'Plan Pro ✓';
     document.getElementById('demo-limit-box').style.display='none';
-    if(chatState==='chatting'||chatState==='initial'){showChatInput();}
-    alert(plan==='advanced'?'¡Plan Advanced activado!':'¡Plan Pro activado!');
+    // Always show chat input after upgrade
+    showChatInput();
+    if(chatState==='initial')chatState='chatting';
+    // If no profile yet, prompt for capital
+    if(!rProfile){rProfile={key:'moderado',label:'⚖️ Moderado',desc:''};rScores=[33,34,33];}
+    if(!uCapital){addAI('¡Bienvenido al plan '+(plan==='advanced'?'Advanced':'Pro')+'! ¿Con cuánto capital mensual contás para invertir?');chatState='await_capital';}
   }
 }
 
