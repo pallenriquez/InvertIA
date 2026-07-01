@@ -852,6 +852,7 @@ async function sendChat(){
   }
   if(chatState==='await_objetivo'){
     uObjetivo=txt;chatState='chatting';showTyping();
+    if(!rProfile){rProfile={key:'moderado',label:'⚖️ Moderado',desc:''};rScores=[33,34,33];}
     await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:rProfile.key,profileLabel:rProfile.label,scores:rScores,capital:uCapital,objetivo:uObjetivo})});
     document.getElementById('ctx-capital').textContent=uCapital;
     document.getElementById('ctx-objetivo').textContent=uObjetivo;
@@ -886,8 +887,9 @@ async function doChat(msg){
   }catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error de conexión.');}
 }
 
-function addAI(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-ai';d.innerHTML=`<div class="msg-avatar">✦</div><div class="msg-bubble">${t.replace(/\n/g,'<br>')}</div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
-function addUser(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-user';d.innerHTML=`<div class="msg-bubble">${t}</div><div class="msg-avatar">👤</div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
+function addAI(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-ai';d.innerHTML=`<div class="msg-avatar">✦</div><div class="msg-bubble">${t.replace(/\n/g,'<br>')}</div>`;m.appendChild(d);scrollToBottom();}
+function scrollToBottom(){setTimeout(()=>{const m=document.getElementById('chat-messages');if(m){m.scrollTop=m.scrollHeight;window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}},80);}
+function addUser(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-user';d.innerHTML=`<div class="msg-bubble">${t}</div><div class="msg-avatar">👤</div>`;m.appendChild(d);scrollToBottom();}
 function showTyping(){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-ai';d.id='typing-msg';d.innerHTML=`<div class="msg-avatar">✦</div><div class="typing-bubble"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
 function removeTyping(){const t=document.getElementById('typing-msg');if(t)t.remove();}
 
