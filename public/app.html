@@ -371,6 +371,14 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
   </div>
 </nav>
 
+<!-- STICKY TAB BAR -->
+<div id="tab-bar" style="display:none;position:sticky;top:57px;z-index:150;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 1.5rem;">
+  <div style="max-width:720px;margin:0 auto;display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
+    <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
+    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
+  </div>
+</div>
+
 <main>
   <div id="step-welcome" class="step active">
     <div class="welcome-box">
@@ -410,12 +418,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     </div>
 
     <!-- TABS -->
-    <div id="tab-bar" style="display:none;margin-bottom:1rem;">
-      <div style="display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
-        <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
-        <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
-      </div>
-    </div>
+
 
     <!-- CHAT TAB -->
     <div id="tab-chat">
@@ -719,37 +722,43 @@ function showReturningUser(days){
 
 // ===== GOAL DASHBOARD =====
 function updateGoalDashboard(){
-  if(!uObjMonto||!uCapMensual)return;
-  const plazo=uObjPlazo||0;
-  const acum=uCapMensual*(plazo>0?plazo:12);
-  const pct=Math.min(Math.round((acum/uObjMonto)*100),100);
-  const falta=Math.max(0,uObjMonto-acum);
+  if(!uObjMonto)return;
   const objetivoLabel=uObjetivo||'Mi objetivo';
 
   // Show tab bar
   document.getElementById('tab-bar').style.display='block';
 
-  // Update goal tab content
+  // Update goal name and description
   document.getElementById('goal-name').textContent=objetivoLabel;
-  document.getElementById('goal-desc-txt').textContent=`Seguí el progreso de tu objetivo: ${objetivoLabel}.`;
-  document.getElementById('goal-current-val').textContent=`USD ${acum.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+  document.getElementById('goal-desc-txt').textContent=`Tu plan para: ${objetivoLabel}.`;
   document.getElementById('goal-target-val').textContent=`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-  document.getElementById('goal-pct-label').textContent=`${pct}% completado`;
-  document.getElementById('goal-remaining-label').textContent=`Falta: USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
 
+  // Plazo badge
   if(uObjPlazo){
     const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
     document.getElementById('goal-time-badge').textContent=a>0?`${a}a${m>0?' '+m+'m':''} estimado`:`${m}m estimado`;
   }
 
-  // Extra info card
-  if(uCapMensual){
+  // Don't show fake accumulated amount - show capital mensual × plazo only if both exist
+  // and make it clear this is the PLAN, not current savings
+  if(uCapMensual&&uObjPlazo){
+    const acumConRendimiento=uCapMensual*uObjPlazo; // simple accumulation without returns
+    const pct=Math.min(Math.round((acumConRendimiento/uObjMonto)*100),100);
+    const falta=Math.max(0,uObjMonto-acumConRendimiento);
+    document.getElementById('goal-current-val').textContent=`USD ${acumConRendimiento.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+    document.getElementById('goal-pct-label').textContent=`${pct}% del plan cumplido`;
+    document.getElementById('goal-remaining-label').textContent=`Falta acumular: USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+    setTimeout(()=>document.getElementById('goal-bar-fill').style.width=pct+'%',100);
+
     document.getElementById('goal-extra-info').style.display='block';
     document.getElementById('goal-cap-mensual').textContent=`USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes`;
     if(uObjPlazo){const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;document.getElementById('goal-plazo').textContent=a>0?`${a} año${a>1?'s':''}${m>0?' '+m+'m':''}`:m+'m';}
+  } else {
+    // Not enough data yet — show placeholder
+    document.getElementById('goal-current-val').textContent='—';
+    document.getElementById('goal-pct-label').textContent='Seguí chateando para ver la proyección';
+    document.getElementById('goal-remaining-label').textContent='';
   }
-
-  setTimeout(()=>document.getElementById('goal-bar-fill').style.width=pct+'%',100);
 
   // Show toast notification
   setTimeout(showGoalToast, 600);
