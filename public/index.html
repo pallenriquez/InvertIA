@@ -721,20 +721,79 @@ document.querySelectorAll('.counter-num').forEach(el => counterObserver.observe(
 </div>
 
 <script>
-let supOpen=false,supStep='init',supData={};
+let supOpen=false,supData={},novaHistory=[];
 function toggleSupportLand(){supOpen=!supOpen;document.getElementById('support-panel-land').classList.toggle('open',supOpen);if(supOpen&&!document.getElementById('support-msgs-land').children.length)initSupportLand();}
 function addSBL(t){const m=document.getElementById('support-msgs-land');const d=document.createElement('div');d.className='smsg-bot2';d.innerHTML=`<div class="smsg-bubble2">${t}</div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
 function addSUL(t){const m=document.getElementById('support-msgs-land');const d=document.createElement('div');d.className='smsg-user2';d.innerHTML=`<div class="smsg-bubble2">${t}</div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
 function setSOL(opts){const el=document.getElementById('support-opts-land');el.innerHTML=opts.map(o=>`<button class="sopt2" onclick="pickSOL('${o}')">${o}</button>`).join('');}
-function pickSOL(o){addSUL(o);document.getElementById('support-opts-land').innerHTML='';processSIL(o);}
-function sendSupportLand(){const i=document.getElementById('sinput-land');const t=i.value.trim();if(!t)return;i.value='';addSUL(t);document.getElementById('support-opts-land').innerHTML='';processSIL(t);}
-function initSupportLand(){setTimeout(()=>addSBL('¡Hola! 👋 Soy Nova. ¿En qué te puedo ayudar?'),300);setTimeout(()=>setSOL(['Tengo una pregunta','Problema técnico','Quiero saber más de los planes','Otro']),800);supStep='type';}
-function processSIL(t){setTimeout(()=>{
-  if(supStep==='type'){supData.type=t;supStep='email';addSBL('¿Cuál es tu email para que podamos responderte?');}
-  else if(supStep==='email'){if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)){addSBL('Ese email no parece válido. ¿Podés reescribirlo?');return;}supData.email=t;supStep='detail';addSBL('Contame con más detalle en qué podemos ayudarte.');}
-  else if(supStep==='detail'){supData.detail=t;supStep='confirm';addSBL(`Listo, esto es lo que voy a enviar:\n📋 ${supData.type}\n📧 ${supData.email}\n📝 ${supData.detail}\n\n¿Confirmamos?`);setSOL(['Sí, enviar','Cancelar']);}
-  else if(supStep==='confirm'){if(t==='Sí, enviar'){supStep='done';addSBL('✅ ¡Listo! Recibimos tu mensaje. Te responderemos a '+supData.email+' en menos de 24hs.');}else{supStep='type';addSBL('Cancelado. ¿En qué más te puedo ayudar?');setSOL(['Tengo una pregunta','Problema técnico','Quiero saber más de los planes','Otro']);}}
-},500);}
+function pickSOL(o){addSUL(o);document.getElementById('support-opts-land').innerHTML='';handleNovaInput(o);}
+function sendSupportLand(){const i=document.getElementById('sinput-land');const t=i.value.trim();if(!t)return;i.value='';addSUL(t);document.getElementById('support-opts-land').innerHTML='';handleNovaInput(t);}
+
+function initSupportLand(){
+  setTimeout(()=>addSBL('¡Hola! 👋 Soy Nova, la asistente virtual de InvertIA. ¿En qué te puedo ayudar hoy?'),300);
+  setTimeout(()=>setSOL(['¿Cómo funciona InvertIA?','¿Cuáles son los planes?','Tengo un problema técnico','Otra consulta']),800);
+}
+
+// Ticket flow state
+let ticketStep=null, ticketData={};
+
+async function handleNovaInput(text){
+  if(ticketStep){processTicket(text);return;}
+  // Show typing indicator
+  const m=document.getElementById('support-msgs-land');
+  const typing=document.createElement('div');
+  typing.className='smsg-bot2';typing.id='nova-typing';
+  typing.innerHTML='<div class="smsg-bubble2" style="color:#9CA3AF;">Nova está escribiendo...</div>';
+  m.appendChild(typing);m.scrollTop=m.scrollHeight;
+
+  novaHistory.push({role:'user',content:text});
+  try{
+    const res=await fetch('/api/nova',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history:novaHistory})});
+    const data=await res.json();
+    document.getElementById('nova-typing')?.remove();
+    if(data.ok){
+      addSBL(data.text);
+      novaHistory.push({role:'assistant',content:data.text});
+      if(data.needs_ticket){
+        // Start ticket flow
+        setTimeout(()=>{
+          addSBL('Para poder ayudarte mejor, necesito algunos datos. ¿Me decís tu email?');
+          ticketStep='email';
+        },400);
+      } else {
+        setTimeout(()=>setSOL(['Tengo otra consulta','Abrir un ticket de soporte']),300);
+      }
+    } else {
+      addSBL('Ups, hubo un problema. ¿Querés que te comunique con el equipo directamente?');
+      setSOL(['Sí, abrir ticket']);
+    }
+  } catch(e){
+    document.getElementById('nova-typing')?.remove();
+    addSBL('Tuve un problema al conectarme. ¿Querés abrir un ticket con el equipo?');
+    setSOL(['Sí, abrir ticket']);
+  }
+}
+
+function processTicket(text){
+  if(ticketStep==='email'){
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)){addSBL('Ese email no parece válido. ¿Podés reescribirlo?');return;}
+    ticketData.email=text;ticketStep='detail';
+    addSBL('¿Podés contarme brevemente cuál es tu consulta o problema?');
+  } else if(ticketStep==='detail'){
+    ticketData.detail=text;ticketStep='confirm';
+    addSBL(`Listo, voy a enviar esto al equipo:\n📧 ${ticketData.email}\n📝 ${ticketData.detail}\n\n¿Confirmamos?`);
+    setSOL(['Sí, enviar','Cancelar']);
+  } else if(ticketStep==='confirm'){
+    if(text==='Sí, enviar'){
+      ticketStep=null;ticketData={};
+      addSBL('✅ ¡Listo! El equipo va a revisar tu caso y te responderá a '+ticketData.email+' en menos de 24hs. ¡Gracias!');
+    } else {
+      ticketStep=null;ticketData={};
+      addSBL('Cancelado. ¿Hay algo más en lo que te pueda ayudar?');
+      setSOL(['Tengo otra consulta']);
+    }
+  }
+}
 </script>
 
 </body>
