@@ -248,33 +248,27 @@ def recommend():
 
 CHART_SYSTEM_SUFFIX = """
 
-REGLAS CRITICAS SOBRE GRAFICOS:
+===== INSTRUCCION OBLIGATORIA SOBRE GRAFICOS =====
 
-CUANDO incluir ---CHART---:
-1. SOLO cuando presentes la cartera final con 2 o mas instrumentos reales (bonos, acciones, CEDEARs, etc.)
-2. SOLO cuando hagas una proyeccion comparativa (inversion actual vs aumentada)
+CUANDO PRESENTAS UNA CARTERA CON 2+ INSTRUMENTOS, la respuesta DEBE terminar con:
 
-CUANDO NO incluir ---CHART---:
-- Si solo estas hablando de plazos, objetivos o contexto de mercado → NO incluir
-- Si todavia no definiste la cartera → NO incluir
-- Si es una proyeccion de un solo numero sin desglose → NO incluir
-
-Formato cuando SÍ corresponde:
 ---CHART---
-{"instruments":[
-  {"name":"Bonos USD","pct":40,"description":"Renta fija en dolares, bajo riesgo","trend":"up","trendNote":"+8% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1082,1170,1265,1368,1479]},
-  {"name":"CEDEARs S&P500","pct":35,"description":"Acciones tech americanas via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1573,1762]},
-  {"name":"Acciones AR","pct":25,"description":"Bolsa argentina, mayor volatilidad","trend":"neutral","trendNote":"+10% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1100,1210,1331,1464,1611]}
-],
-"objetivoUpdate":{"monto":150000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":588}}
+{"instruments":[...], "objetivoUpdate":{...}}
 
-REGLAS del JSON:
-- "instruments" debe tener 2 o mas items con nombres reales de instrumentos financieros
+NO es opcional. Si presentas instrumentos con porcentajes y NO incluís ---CHART---, la respuesta es incompleta.
+
+FORMATO EXACTO (copiar estructura):
+---CHART---
+{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR en dolares","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":35,"description":"Bolsa argentina con upside local","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":20,"description":"Renta fija en dolares, ancla de cartera","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":10000,"plazoMeses":30,"plazoDeseadoMeses":30,"capitalMensual":294}}
+
+REGLAS:
 - pct debe sumar exactamente 100
-- data: valores proyectados reales del instrumento (no del objetivo total), comenzando desde 1000
-- labels: años o meses del horizonte de inversion
-- objetivoUpdate: SOLO incluir cuando el usuario confirmo monto, capital mensual y/o plazo
-- Para comparativa: agregar "data2" y "label2" al primer instrumento unicamente
+- Minimo 2 instrumentos con nombres reales (no "Proyeccion acumulada")
+- data: rendimiento proyectado del instrumento empezando en 1000
+- objetivoUpdate: siempre incluir cuando tenes monto + plazo + capital confirmados
+- El separador ---CHART--- va en su propia linea, despues del texto
+
+=====
 """
 
 @app.route('/api/chat', methods=['POST'])
@@ -329,6 +323,7 @@ def chat():
         "2. Cuando tenes capital + objetivo + plazo → calculá si es realista, si no alcanza sugerir aumentar inversion O estirar plazo\n"
         "3. Si acepta aumentar inversion → mostrar proyeccion comparativa con data2 en el JSON\n"
         "4. Cuando alineas expectativas → presentar cartera personalizada CON grafico obligatorio\n"
+        "5. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Querés que te explique cómo empezar con alguno de estos instrumentos?' o '¿Tenés alguna duda sobre la distribución?'\n"
         + CHART_SYSTEM_SUFFIX
     )
 
