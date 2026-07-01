@@ -307,6 +307,7 @@ def chat():
     if cap_mensual: ctx.append(f"Capital mensual a invertir: USD {cap_mensual:,.0f}")
 
     system = (
+        f"INSTRUCCION CRITICA: Cuando presentes una cartera con instrumentos y porcentajes, SIEMPRE termina tu respuesta con ---CHART--- seguido del JSON. Sin excepcion.\n\n"
         f"Sos un asesor financiero argentino experto y personal. Voseo. Directo, profesional. Sin asteriscos ni markdown.\n"
         f"Perfil: {profile}. Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.\n"
         + ('\n'.join(ctx)+'\n' if ctx else '')
@@ -331,7 +332,7 @@ def chat():
     msgs.append({'role':'user','content':message})
 
     try:
-        result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=2000)
+        result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=3000)
         if 'error' in result: conn.close(); return jsonify({'ok':False,'error':str(result['error'])})
         full = result.get('content',[{}])[0].get('text','').strip()
         parts = full.split('---CHART---')
