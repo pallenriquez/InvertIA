@@ -248,26 +248,28 @@ def recommend():
 
 CHART_SYSTEM_SUFFIX = """
 
-===== INSTRUCCION OBLIGATORIA SOBRE GRAFICOS =====
+===== GRAFICOS =====
 
-CUANDO PRESENTAS UNA CARTERA CON 2+ INSTRUMENTOS, la respuesta DEBE terminar con:
+USA ---CHART--- SOLO en estos casos:
+1. Cuando presentes la distribucion de cartera por primera vez (2+ instrumentos con %)
+2. Cuando hagas una proyeccion comparativa (inversion actual vs aumentada)
+3. Cuando el usuario pida ver grafico o proyeccion
 
+NO uses ---CHART--- cuando:
+- Estes explicando el mercado o contexto
+- Estes haciendo preguntas sobre objetivos o capital
+- La cartera ya fue presentada antes en la misma sesion
+- Sea una respuesta corta o conversacional
+
+FORMATO cuando corresponde:
 ---CHART---
-{"instruments":[...], "objetivoUpdate":{...}}
+{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":25,"description":"Bolsa argentina","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":30,"description":"Renta fija en dolares","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":60000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":294}}
 
-NO es opcional. Si presentas instrumentos con porcentajes y NO incluís ---CHART---, la respuesta es incompleta.
-
-FORMATO EXACTO (copiar estructura):
----CHART---
-{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR en dolares","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":35,"description":"Bolsa argentina con upside local","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":20,"description":"Renta fija en dolares, ancla de cartera","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2027","2028","2028","2029"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":10000,"plazoMeses":30,"plazoDeseadoMeses":30,"capitalMensual":294}}
-
-REGLAS:
-- pct debe sumar exactamente 100
-- Minimo 2 instrumentos con nombres reales (no "Proyeccion acumulada")
-- data: rendimiento proyectado del instrumento empezando en 1000
-- objetivoUpdate: siempre incluir cuando tenes monto + plazo + capital confirmados
-- El separador ---CHART--- va en su propia linea, despues del texto
-
+REGLAS del JSON:
+- pct suma exactamente 100
+- Minimo 2 instrumentos reales
+- data: rendimiento del instrumento comenzando en 1000
+- objetivoUpdate: incluir cuando tenes monto + plazo + capital confirmados
 =====
 """
 
@@ -307,7 +309,6 @@ def chat():
     if cap_mensual: ctx.append(f"Capital mensual a invertir: USD {cap_mensual:,.0f}")
 
     system = (
-        f"INSTRUCCION CRITICA: Cuando presentes una cartera con instrumentos y porcentajes, SIEMPRE termina tu respuesta con ---CHART--- seguido del JSON. Sin excepcion.\n\n"
         f"Sos un asesor financiero argentino experto y personal. Voseo. Directo, profesional. Sin asteriscos ni markdown.\n"
         f"Perfil: {profile}. Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.\n"
         + ('\n'.join(ctx)+'\n' if ctx else '')
