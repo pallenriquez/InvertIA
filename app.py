@@ -248,26 +248,33 @@ def recommend():
 
 CHART_SYSTEM_SUFFIX = """
 
-REGLA CRITICA SOBRE GRAFICOS:
-Cuando presentes una cartera con instrumentos O una proyeccion numerica, DEBES incluir al final de tu respuesta exactamente esto:
+REGLAS CRITICAS SOBRE GRAFICOS:
+
+CUANDO incluir ---CHART---:
+1. SOLO cuando presentes la cartera final con 2 o mas instrumentos reales (bonos, acciones, CEDEARs, etc.)
+2. SOLO cuando hagas una proyeccion comparativa (inversion actual vs aumentada)
+
+CUANDO NO incluir ---CHART---:
+- Si solo estas hablando de plazos, objetivos o contexto de mercado → NO incluir
+- Si todavia no definiste la cartera → NO incluir
+- Si es una proyeccion de un solo numero sin desglose → NO incluir
+
+Formato cuando SÍ corresponde:
 ---CHART---
-{"instruments":[...]}
-
-El separador es exactamente: ---CHART--- (sin espacios, sin texto extra antes ni despues en esa linea)
-El JSON va INMEDIATAMENTE despues, sin texto adicional.
-
-Formato del JSON:
 {"instruments":[
-  {"name":"Nombre instrumento","pct":33,"description":"que es en una frase","trend":"up","trendNote":"+8% anual",
-   "labels":["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
-   "data":[1000,1008,1016,1024,1033,1041,1050,1059,1068,1077,1086,1096]}
+  {"name":"Bonos USD","pct":40,"description":"Renta fija en dolares, bajo riesgo","trend":"up","trendNote":"+8% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1082,1170,1265,1368,1479]},
+  {"name":"CEDEARs S&P500","pct":35,"description":"Acciones tech americanas via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1573,1762]},
+  {"name":"Acciones AR","pct":25,"description":"Bolsa argentina, mayor volatilidad","trend":"neutral","trendNote":"+10% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1100,1210,1331,1464,1611]}
 ],
-"objetivoUpdate":{"monto":150000,"plazoMeses":360,"plazoDeseadoMeses":240,"capitalMensual":500}}
+"objetivoUpdate":{"monto":150000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":588}}
 
-- pct debe sumar 100 entre todos los instrumentos
-- data debe tener valores numericos reales proyectados (minimo 12 valores)
-- objetivoUpdate: incluirlo cuando el usuario confirma su objetivo, monto, capital o plazo
-- Para proyeccion comparativa: agregar "data2":[...] y "label2":"Con inversion aumentada" al primer instrumento
+REGLAS del JSON:
+- "instruments" debe tener 2 o mas items con nombres reales de instrumentos financieros
+- pct debe sumar exactamente 100
+- data: valores proyectados reales del instrumento (no del objetivo total), comenzando desde 1000
+- labels: años o meses del horizonte de inversion
+- objetivoUpdate: SOLO incluir cuando el usuario confirmo monto, capital mensual y/o plazo
+- Para comparativa: agregar "data2" y "label2" al primer instrumento unicamente
 """
 
 @app.route('/api/chat', methods=['POST'])
