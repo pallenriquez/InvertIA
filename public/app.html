@@ -853,13 +853,15 @@ async function sendChat(){
   if(chatState==='await_objetivo'){
     uObjetivo=txt;chatState='chatting';
     if(!rProfile){rProfile={key:'moderado',label:'⚖️ Moderado',desc:''};rScores=[33,34,33];}
-    try{await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:rProfile.key,profileLabel:rProfile.label,scores:rScores,capital:uCapital,objetivo:uObjetivo})});}catch(e){console.warn('save-profile error:',e);}
+    const safeScores=Array.isArray(rScores)&&rScores.length===3?rScores:[33,34,33];
+    try{await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:rProfile.key,profileLabel:rProfile.label,scores:safeScores,capital:uCapital,objetivo:uObjetivo})});}catch(e){console.warn('save-profile error:',e);}
     document.getElementById('ctx-capital').textContent=uCapital;
     document.getElementById('ctx-objetivo').textContent=uObjetivo;
     document.getElementById('ctx-profile').textContent=rProfile.label;
     document.getElementById('context-bar').style.display='flex';
     showTyping();
-    await doChat(`Mi capital mensual es ${uCapital} y mi objetivo es ${uObjetivo}.`);
+    const msgCapObj = `Mi capital mensual es ${(uCapital||'').replace(/`/g,"'")} y mi objetivo es ${(uObjetivo||'').replace(/`/g,"'")}.`;
+    await doChat(msgCapObj);
     return;
   }
   showTyping();await doChat(txt);
@@ -867,7 +869,20 @@ async function sendChat(){
 
 async function doChat(msg){
   try{
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:rProfile?rProfile.label:'',scores:rScores||[33,34,33],capital:uCapital,objetivo:uObjetivo,message:msg,objetivoMonto:uObjMonto,objetivoPlazoMeses:uObjPlazo,capitalMensual:uCapMensual})});
+    // Sanitize all string values before JSON serialization
+    const safeStr = s => (String(s||'')).replace(/[\u0000-\u001F]/g,'').trim();
+    const chatBody = {
+      profile: safeStr(rProfile ? rProfile.label : '⚖️ Moderado'),
+      scores: Array.isArray(rScores) && rScores.length===3 ? rScores : [33,34,33],
+      capital: safeStr(uCapital),
+      objetivo: safeStr(uObjetivo),
+      message: safeStr(msg),
+      objetivoMonto: uObjMonto ? Number(uObjMonto) : null,
+      objetivoPlazoMeses: uObjPlazo ? Number(uObjPlazo) : null,
+      capitalMensual: uCapMensual ? Number(uCapMensual) : null
+    };
+    console.log('chatBody:', JSON.stringify(chatBody));
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});
     const data=await res.json();removeTyping();document.getElementById('chat-send-btn').disabled=false;
     if(!data.ok){addAI('Error al conectar. Intentá de nuevo.');return;}
     addAI(data.text);
