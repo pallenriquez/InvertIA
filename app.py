@@ -437,6 +437,59 @@ def activate_paid():
     return jsonify({'ok': True})
 
 
+
+
+@app.route('/api/nova', methods=['POST'])
+def nova():
+    data = request.json or {}
+    message = data.get('message', '')
+    history = data.get('history', [])
+
+    system = """Sos Nova, la asistente virtual de InvertIA. Sos amable, clara y concisa. Respondés en español con voseo.
+
+InvertIA es una app de asesoramiento financiero con IA para el mercado argentino. Información clave:
+- Plan Demo: gratis, 1 análisis con gráficos, modo oscuro/claro
+- Plan Pro: U$S 8/mes, chat ilimitado, cartera personalizada, memoria entre sesiones, análisis de mercado
+- Plan Advanced: U$S 21/mes, todo lo del Pro + control financiero personal + panel de inversiones actualizable
+- Descuento anual del 20% en planes pagos
+- El asesor recuerda el historial entre sesiones mes a mes
+- Se puede cancelar en cualquier momento
+- No accedemos a cuentas bancarias ni datos financieros reales
+- Las recomendaciones son educativas, no reemplazan a un asesor matriculado
+- Contacto: soporte@invertia.ar
+
+REGLAS:
+1. Si la pregunta es sobre planes, funcionalidades, precios, privacidad o cómo funciona la app → respondé directamente y con claridad. Máximo 3 oraciones.
+2. Si es un problema técnico, un bug, un reclamo de pago o algo que requiere revisión manual → respondé brevemente que lo vas a derivar al equipo y devolvé JSON con "needs_ticket": true
+3. Si no sabés la respuesta → decí que lo vas a derivar al equipo y devolvé "needs_ticket": true
+
+Siempre respondé con JSON así:
+{"text": "tu respuesta aquí", "needs_ticket": false}
+Solo needs_ticket: true cuando sea necesario escalar al equipo humano."""
+
+    messages = []
+    for h in history[-6:]:
+        if h.get('role') and h.get('content'):
+            messages.append({'role': h['role'], 'content': h['content']})
+    messages.append({'role': 'user', 'content': message})
+
+    try:
+        resp = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01'},
+            json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 300, 'system': system, 'messages': messages},
+            timeout=30
+        )
+        result = resp.json()
+        text = result.get('content', [{}])[0].get('text', '').strip()
+        try:
+            parsed = json.loads(text.replace('```json','').replace('```','').strip())
+            return jsonify({'ok': True, 'text': parsed.get('text',''), 'needs_ticket': parsed.get('needs_ticket', False)})
+        except:
+            return jsonify({'ok': True, 'text': text, 'needs_ticket': False})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=port, debug=False)
