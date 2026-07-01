@@ -755,11 +755,11 @@ async function handleNovaInput(text){
       addSBL(data.text);
       novaHistory.push({role:'assistant',content:data.text});
       if(data.needs_ticket){
-        // Start ticket flow
+        // The AI message already explained — just ask for email
         setTimeout(()=>{
-          addSBL('Para poder ayudarte mejor, necesito algunos datos. ¿Me decís tu email?');
+          addSBL('¿Me decís tu email de contacto?');
           ticketStep='email';
-        },400);
+        },500);
       } else {
         setTimeout(()=>setSOL(['Tengo otra consulta','Abrir un ticket de soporte']),300);
       }
