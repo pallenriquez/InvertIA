@@ -499,7 +499,9 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         </div>
 
         <!-- Pending state -->
-        <div id="goal-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;">Seguí chateando con tu asesor para ver el progreso aquí.</div>
+        <div id="goal-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
+          Contale a tu asesor cuánto querés invertir por mes y tu objetivo para ver el progreso aquí. 💬
+        </div>
       </div>
     </div>
 
@@ -594,7 +596,6 @@ function switchTab(tab){
   const isChat = tab==='chat';
   document.getElementById('tab-chat').style.display = isChat?'block':'none';
   document.getElementById('tab-goal').style.display = isChat?'none':'block';
-  // Hide profile section (scores/badge) when on goal tab
   const ps = document.getElementById('profile-section');
   if(ps) ps.style.display = isChat?'block':'none';
   const chatBtn = document.getElementById('tab-chat-btn');
@@ -605,8 +606,15 @@ function switchTab(tab){
   goalBtn.style.background = isChat?'transparent':'var(--card)';
   goalBtn.style.color = isChat?'var(--text2)':'var(--text)';
   goalBtn.style.boxShadow = isChat?'none':'0 1px 4px var(--shadow)';
-  if(!isChat)document.getElementById('chat-input-area').style.display='none';
-  else if(chatState==='chatting'||chatState==='await_capital'||chatState==='await_objetivo'||chatState==='await_capital_currency')document.getElementById('chat-input-area').style.display='block';
+  if(!isChat){
+    document.getElementById('chat-input-area').style.display='none';
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    if(chatState==='chatting'||chatState==='await_capital'||chatState==='await_objetivo'||chatState==='await_capital_currency')
+      document.getElementById('chat-input-area').style.display='block';
+    // Scroll to bottom of chat when returning to asesor
+    setTimeout(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}),100);
+  }
 }
 
 // GOAL TOAST
@@ -808,6 +816,18 @@ function updateGoalDashboard(){
   setTimeout(showGoalToast, 600);
 }
 
+// Call updateGoalDashboard whenever objetivo changes even without full data
+function updateGoalBasic(){
+  if(!uObjetivo) return;
+  const emoji = getGoalEmoji(uObjetivo);
+  document.getElementById('tab-bar').style.display='block';
+  document.getElementById('goal-emoji-big').textContent=emoji;
+  document.getElementById('goal-name').textContent=uObjetivo;
+  document.getElementById('goal-pending').style.display='block';
+  // Update tab button emoji too
+  document.getElementById('tab-goal-btn').textContent=emoji+' Mi objetivo';
+}
+
 // ===== FIN PANEL =====
 function updateFinPanel(fin){
   if(!fin||(!fin.ingresos&&!fin.egresos))return;
@@ -913,6 +933,7 @@ async function sendChat(){
     document.getElementById('ctx-objetivo').textContent=uObjetivo;
     document.getElementById('ctx-profile').textContent=rProfile.label;
     document.getElementById('context-bar').style.display='flex';
+    updateGoalBasic(); // Show goal tab immediately
     showTyping();
     const msgCapObj = `Mi capital mensual es ${(uCapital||'').replace(/`/g,"'")} y mi objetivo es ${(uObjetivo||'').replace(/`/g,"'")}.`;
     await doChat(msgCapObj);
