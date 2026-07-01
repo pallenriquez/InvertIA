@@ -363,6 +363,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         <div class="cfg-item" onclick="openProfileModal()"><span class="cfg-icon">👤</span> Mi perfil inversor</div>
         <div class="cfg-item" onclick="openUpgradeModal()"><span class="cfg-icon">⚡</span> Mejorar plan</div>
         <div class="cfg-item" onclick="openBillingModal()"><span class="cfg-icon">💳</span> Plan y facturación</div>
+        <div class="cfg-item" onclick="closeConfigAndRestart()"><span class="cfg-icon">↺</span> Hacer el test de nuevo</div>
         <div class="cfg-sep"></div>
         <div class="cfg-item danger" onclick="window.location.href='/logout'"><span class="cfg-icon">🚪</span> Cerrar sesión</div>
       </div>
@@ -408,28 +409,16 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
       </div>
     </div>
 
-    <!-- GOAL DASHBOARD -->
-    <div id="goal-dashboard" class="goal-dashboard" style="display:none;">
-      <div class="goal-dashboard-header">
-        <div class="goal-title">🎯 <span id="goal-name">Mi objetivo</span></div>
-        <div class="goal-time-badge" id="goal-time-badge">—</div>
-      </div>
-      <div class="goal-amounts">
-        <div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Proyección acumulada</div>
-          <div class="goal-current" id="goal-current-val">USD 0</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Meta</div>
-          <div style="font-size:16px;font-weight:700;color:var(--text);" id="goal-target-val">USD —</div>
-        </div>
-      </div>
-      <div class="goal-bar-bg"><div class="goal-bar-fill" id="goal-bar-fill" style="width:0%"></div></div>
-      <div class="goal-meta">
-        <span id="goal-pct-label">0% completado</span>
-        <span id="goal-remaining-label">Falta: —</span>
+    <!-- TABS -->
+    <div id="tab-bar" style="display:none;margin-bottom:1rem;">
+      <div style="display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
+        <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
+        <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
       </div>
     </div>
+
+    <!-- CHAT TAB -->
+    <div id="tab-chat">
 
     <!-- FIN PANEL -->
     <div id="fin-panel" class="fin-panel" style="display:none;">
@@ -448,6 +437,45 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     </div>
 
     <div class="chat-messages" id="chat-messages"></div>
+    </div><!-- end tab-chat -->
+
+    <!-- GOAL TAB -->
+    <div id="tab-goal" style="display:none;">
+      <div class="goal-dashboard" style="margin-bottom:0;">
+        <div class="goal-dashboard-header">
+          <div class="goal-title">🎯 <span id="goal-name">Mi objetivo</span></div>
+          <div class="goal-time-badge" id="goal-time-badge">—</div>
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;" id="goal-desc-txt">Seguí chateando con tu asesor para ver el progreso aquí.</div>
+        <div class="goal-amounts">
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Proyección acumulada</div>
+            <div class="goal-current" id="goal-current-val">USD 0</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Meta</div>
+            <div style="font-size:16px;font-weight:700;color:var(--text);" id="goal-target-val">USD —</div>
+          </div>
+        </div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" id="goal-bar-fill" style="width:0%"></div></div>
+        <div class="goal-meta">
+          <span id="goal-pct-label">0% completado</span>
+          <span id="goal-remaining-label">Falta: —</span>
+        </div>
+        <div id="goal-extra-info" style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Inversión mensual</div>
+              <div style="font-size:20px;font-weight:700;color:var(--purple);font-family:'Space Grotesk',sans-serif;" id="goal-cap-mensual">—</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Plazo estimado</div>
+              <div style="font-size:20px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;" id="goal-plazo">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div id="demo-limit-box" style="display:none;">
       <div class="demo-limit">
@@ -471,7 +499,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     </div>
 
     <p class="disclaimer">⚠️ Contenido educativo. No constituye asesoramiento financiero profesional.</p>
-    <div class="restart-bar" id="restart-bar"><button class="btn-restart" onclick="restart()">↺ Hacer el test de nuevo</button></div>
+    <div id="restart-bar" style="display:none;"></div>
   </div>
 </main>
 
@@ -487,6 +515,18 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
       <button class="chat-send" id="chat-send-btn" onclick="sendChat()">➤</button>
     </div>
     <div class="chat-hint">Tu asesor recuerda el contexto de sesiones anteriores</div>
+  </div>
+</div>
+
+<!-- GOAL TOAST -->
+<div id="goal-toast" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);z-index:600;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem 1.5rem;box-shadow:0 8px 30px var(--shadow);max-width:340px;width:90%;opacity:0;transition:all .4s ease;pointer-events:none;">
+  <div style="display:flex;align-items:flex-start;gap:12px;">
+    <div style="font-size:22px;flex-shrink:0;">🎯</div>
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;" id="goal-toast-title">Tu objetivo está listo</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:.75rem;" id="goal-toast-msg">A partir de ahora podés ver el progreso desde la pestaña Objetivo.</div>
+      <button onclick="acceptGoalToast()" style="background:var(--purple);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Entendido ↗</button>
+    </div>
   </div>
 </div>
 
@@ -521,6 +561,45 @@ const PIE_COLORS=['#6C47FF','#00C48C','#F97316','#3B82F6','#EC4899'];
 
 // ===== CONFIG =====
 function toggleConfig(){document.getElementById('config-dropdown').classList.toggle('open');}
+function closeConfigAndRestart(){document.getElementById('config-dropdown').classList.remove('open');restart();}
+
+// TABS
+function switchTab(tab){
+  const isChat = tab==='chat';
+  document.getElementById('tab-chat').style.display = isChat?'block':'none';
+  document.getElementById('tab-goal').style.display = isChat?'none':'block';
+  const chatBtn = document.getElementById('tab-chat-btn');
+  const goalBtn = document.getElementById('tab-goal-btn');
+  chatBtn.style.background = isChat?'var(--card)':'transparent';
+  chatBtn.style.color = isChat?'var(--text)':'var(--text2)';
+  chatBtn.style.boxShadow = isChat?'0 1px 4px var(--shadow)':'none';
+  goalBtn.style.background = isChat?'transparent':'var(--card)';
+  goalBtn.style.color = isChat?'var(--text2)':'var(--text)';
+  goalBtn.style.boxShadow = isChat?'none':'0 1px 4px var(--shadow)';
+  if(!isChat)document.getElementById('chat-input-area').style.display='none';
+  else if(chatState==='chatting'||chatState==='await_capital'||chatState==='await_objetivo')document.getElementById('chat-input-area').style.display='block';
+}
+
+// GOAL TOAST
+let goalToastShown = false;
+function showGoalToast(){
+  if(goalToastShown)return;
+  goalToastShown = true;
+  const objetivo = uObjetivo||'tu objetivo';
+  const monto = uObjMonto?`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`:'';
+  document.getElementById('goal-toast-title').textContent = `¡Tu objetivo está activado!`;
+  document.getElementById('goal-toast-msg').textContent = `A partir de ahora podés ver cuánto te falta para ${objetivo}${monto?' ('+monto+')':''} desde la pestaña Objetivo.`;
+  const toast = document.getElementById('goal-toast');
+  toast.style.pointerEvents = 'all';
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+}
+function acceptGoalToast(){
+  const toast = document.getElementById('goal-toast');
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateX(-50%) translateY(20px)';
+  toast.style.pointerEvents = 'none';
+}
 document.addEventListener('click',e=>{if(!e.target.closest('.config-wrap'))document.getElementById('config-dropdown').classList.remove('open');});
 
 // ===== MODALS =====
@@ -629,6 +708,11 @@ function showReturningUser(days){
   document.getElementById('context-bar').style.display='flex';
   if(uObjMonto&&uCapMensual)updateGoalDashboard();
   chatState='chatting';showChatInput();
+  if(uObjMonto&&uCapMensual){
+    document.getElementById('tab-bar').style.display='block';
+    goalToastShown=true; // don't show toast for returning users
+    updateGoalDashboard();
+  }
   fetch('/api/returning-greeting',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
     .then(r=>r.json()).then(d=>{if(d.ok)addAI(d.text);else addAI(`¡Hola de nuevo, ${userData.name}! ¿En qué te puedo ayudar hoy?`);});
 }
@@ -640,14 +724,35 @@ function updateGoalDashboard(){
   const acum=uCapMensual*(plazo>0?plazo:12);
   const pct=Math.min(Math.round((acum/uObjMonto)*100),100);
   const falta=Math.max(0,uObjMonto-acum);
-  document.getElementById('goal-dashboard').style.display='block';
-  document.getElementById('goal-name').textContent=uObjetivo||'Mi objetivo';
+  const objetivoLabel=uObjetivo||'Mi objetivo';
+
+  // Show tab bar
+  document.getElementById('tab-bar').style.display='block';
+
+  // Update goal tab content
+  document.getElementById('goal-name').textContent=objetivoLabel;
+  document.getElementById('goal-desc-txt').textContent=`Seguí el progreso de tu objetivo: ${objetivoLabel}.`;
   document.getElementById('goal-current-val').textContent=`USD ${acum.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
   document.getElementById('goal-target-val').textContent=`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
   document.getElementById('goal-pct-label').textContent=`${pct}% completado`;
   document.getElementById('goal-remaining-label').textContent=`Falta: USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-  if(uObjPlazo){const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;document.getElementById('goal-time-badge').textContent=a>0?`${a}a${m>0?' '+m+'m':''} estimado`:`${m}m estimado`;}
+
+  if(uObjPlazo){
+    const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
+    document.getElementById('goal-time-badge').textContent=a>0?`${a}a${m>0?' '+m+'m':''} estimado`:`${m}m estimado`;
+  }
+
+  // Extra info card
+  if(uCapMensual){
+    document.getElementById('goal-extra-info').style.display='block';
+    document.getElementById('goal-cap-mensual').textContent=`USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes`;
+    if(uObjPlazo){const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;document.getElementById('goal-plazo').textContent=a>0?`${a} año${a>1?'s':''}${m>0?' '+m+'m':''}`:m+'m';}
+  }
+
   setTimeout(()=>document.getElementById('goal-bar-fill').style.width=pct+'%',100);
+
+  // Show toast notification
+  setTimeout(showGoalToast, 600);
 }
 
 // ===== FIN PANEL =====
