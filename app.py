@@ -484,19 +484,30 @@ NO incluyas ```json ni ningún otro texto. SOLO el objeto JSON."""
         )
         result = resp.json()
         text = result.get('content', [{}])[0].get('text', '').strip()
-        # Try to parse JSON response
+        # Parse JSON response
+        import re
         try:
-            clean = text.replace('```json','').replace('```','').strip()
-            # Find JSON object in response
-            import re
-            match = re.search(r'\{.*\}', clean, re.DOTALL)
+            clean = text.strip()
+            # Remove markdown code blocks if present
+            clean = re.sub(r'```json\s*', '', clean)
+            clean = re.sub(r'```\s*', '', clean)
+            clean = clean.strip()
+            # Find the JSON object (greedy match for nested)
+            match = re.search(r'\{[^{}]*"text"[^{}]*\}', clean, re.DOTALL)
             if match:
                 parsed = json.loads(match.group())
-                return jsonify({'ok': True, 'text': parsed.get('text',''), 'needs_ticket': parsed.get('needs_ticket', False)})
+                resp_text = parsed.get('text', '').replace('\\n', '\n').replace('**', '')
+                return jsonify({'ok': True, 'text': resp_text, 'needs_ticket': parsed.get('needs_ticket', False)})
             else:
-                return jsonify({'ok': True, 'text': clean, 'needs_ticket': False})
-        except:
-            return jsonify({'ok': True, 'text': text, 'needs_ticket': False})
+                # Try parsing the whole thing
+                parsed = json.loads(clean)
+                resp_text = parsed.get('text', clean).replace('\\n', '\n').replace('**', '')
+                return jsonify({'ok': True, 'text': resp_text, 'needs_ticket': parsed.get('needs_ticket', False)})
+        except Exception as parse_err:
+            print('Nova parse error:', parse_err, '| raw:', text[:200])
+            # Fallback: return raw text cleaned up
+            fallback = text.replace('{"text":', '').replace('"needs_ticket": false}', '').replace('"needs_ticket": true}', '').strip().strip('"')
+            return jsonify({'ok': True, 'text': fallback, 'needs_ticket': False})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
