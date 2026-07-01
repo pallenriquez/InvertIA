@@ -60,6 +60,14 @@ init_db()
 def index():
     return send_from_directory('public', 'index.html')
 
+@app.route('/privacidad')
+def privacidad():
+    return send_from_directory('public', 'privacidad.html')
+
+@app.route('/terminos')
+def terminos():
+    return send_from_directory('public', 'terminos.html')
+
 @app.route('/register')
 def register_page():
     if session.get('user_id'): return redirect('/app')
