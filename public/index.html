@@ -267,10 +267,9 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
   <div class="logo">Invert<span>IA</span></div>
   <div class="nav-links">
     <a href="#como-funciona">Cómo funciona</a>
-    <a href="#precios">Precios</a>
+    <a href="#logros">¿Qué lograrás?</a>
+    <a href="#precios">Planes</a>
     <a href="#faq">Preguntas frecuentes</a>
-    <span class="theme-icon" id="theme-icon">🌙</span>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema"></button>
     <a href="/login" class="btn btn-outline">Iniciar sesión</a>
     <a href="/register" class="btn btn-primary">Empezar gratis</a>
   </div>
@@ -451,8 +450,8 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
 <!-- PRECIOS -->
 <section class="pricing-section" id="precios">
   <div class="section-inner">
-    <div class="section-tag">Precios</div>
-    <h2 class="section-title">Simple y transparente</h2>
+    <div class="section-tag">Planes</div>
+    <h2 class="section-title">Elegí el plan que se adapta a vos</h2>
     <p class="section-sub">Probá gratis una vez, después decidís si querés seguir.</p>
     <div class="billing-toggle">
       <span class="toggle-label active" id="toggle-monthly" onclick="setBilling('monthly')">Mensual</span>
@@ -467,11 +466,14 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
           <li><span class="pcv2-check">✓</span> 1 análisis personalizado con gráficos</li>
           <li><span class="pcv2-check">✓</span> Contexto de mercado actualizado</li>
+          <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Chat ilimitado con tu asesor IA</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Cartera personalizada con proyecciones</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Memoria entre sesiones, mes a mes</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Análisis de mercado en tiempo real</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento mensual de inversiones</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
         </ul>
         <a href="/register" class="btn-pcv2 outline">Probar gratis</a>
       </div>
@@ -487,6 +489,11 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Memoria entre sesiones, mes a mes</li>
           <li><span class="pcv2-check">✓</span> Análisis de mercado en tiempo real</li>
           <li><span class="pcv2-check">✓</span> Seguimiento mensual de inversiones</li>
+          <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Análisis de gastos hormiga</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Recomendaciones de ahorro personalizadas</li>
         </ul>
         <a href="/register" class="btn-pcv2 filled">Empezar ahora</a>
       </div>
@@ -496,16 +503,22 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
         <div class="pcv2-amount" id="price-adv"><span>U$S</span>21</div>
         <div class="pcv2-period" id="period-adv">por mes</div>
         <ul class="pcv2-features">
-          <li><span class="pcv2-check">✓</span> Todo lo del plan Pro</li>
+          <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
+          <li><span class="pcv2-check">✓</span> Chat ilimitado con tu asesor IA</li>
+          <li><span class="pcv2-check">✓</span> Cartera personalizada con proyecciones</li>
+          <li><span class="pcv2-check">✓</span> Memoria entre sesiones, mes a mes</li>
+          <li><span class="pcv2-check">✓</span> Análisis de mercado en tiempo real</li>
+          <li><span class="pcv2-check">✓</span> Seguimiento mensual de inversiones</li>
+          <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
           <li><span class="pcv2-check">✓</span> Control financiero personal</li>
-          <li><span class="pcv2-check">✓</span> Análisis de gastos e identificación de gastos hormiga</li>
           <li><span class="pcv2-check">✓</span> Panel de inversiones actualizable</li>
+          <li><span class="pcv2-check">✓</span> Análisis de gastos hormiga</li>
           <li><span class="pcv2-check">✓</span> Recomendaciones de ahorro personalizadas</li>
         </ul>
         <a href="/register" class="btn-pcv2 filled-green">Quiero Advanced</a>
       </div>
     </div>
-  </div>
+    </div>
 </section>
 
 <!-- TRANSPARENCIA -->
@@ -623,19 +636,6 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
 </footer>
 
 <script>
-// THEME TOGGLE
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
-  localStorage.setItem('theme', isDark ? 'light' : 'dark');
-}
-// Restore saved theme
-const savedTheme = localStorage.getItem('theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
-document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-
 // FAQ
 function toggleFaq(btn) {
   const item = btn.closest('.faq-item');
