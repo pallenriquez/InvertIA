@@ -284,9 +284,15 @@ def chat():
 
     capital_usd = capital
     if capital:
-        nums = re.findall(r'[\d.]+',capital.replace(',','.'))
-        num = float(nums[0]) if nums else 0
-        if any(w in capital.lower() for w in ['peso','ars',' p ']):
+        # Remove thousand separators (dots used in Argentine format: 1.000.000)
+        cleaned = re.sub(r'\.(?=\d{3})', '', capital)  # remove dots used as thousands separator
+        cleaned = cleaned.replace(',', '.')  # convert comma decimal to dot
+        nums = re.findall(r'[\d.]+', cleaned)
+        try:
+            num = float(nums[0]) if nums else 0
+        except (ValueError, IndexError):
+            num = 0
+        if any(w in capital.lower() for w in ['peso','ars','pesos','argentino',' p ']):
             capital_usd = f"{capital} (~USD {num/1700:,.0f})"
 
     high_ticket = any(w in objetivo.lower() for w in ['casa','departamento','auto','viaje','retiro','jubilacion','inmueble']) if objetivo else False
