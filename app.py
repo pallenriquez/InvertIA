@@ -464,9 +464,10 @@ REGLAS IMPORTANTES:
 3. NUNCA menciones el email soporte@invertia.ar ni des otros canales alternativos. Solo abrí el ticket.
 4. NUNCA des dos opciones al mismo tiempo (ticket Y email). Solo una cosa.
 
-Respondé SIEMPRE con JSON:
-{"text": "tu respuesta", "needs_ticket": false}
-needs_ticket: true solo cuando necesites escalar al equipo."""
+FORMATO OBLIGATORIO - respondé ÚNICAMENTE con JSON válido, sin texto antes ni después, sin markdown:
+{"text": "tu respuesta aquí", "needs_ticket": false}
+Si necesitás escalar: {"text": "Perfecto, para ayudarte mejor voy a necesitar algunos datos y nuestro equipo te va a responder por email.", "needs_ticket": true}
+NO incluyas ```json ni ningún otro texto. SOLO el objeto JSON."""
 
     messages = []
     for h in history[-6:]:
@@ -483,9 +484,17 @@ needs_ticket: true solo cuando necesites escalar al equipo."""
         )
         result = resp.json()
         text = result.get('content', [{}])[0].get('text', '').strip()
+        # Try to parse JSON response
         try:
-            parsed = json.loads(text.replace('```json','').replace('```','').strip())
-            return jsonify({'ok': True, 'text': parsed.get('text',''), 'needs_ticket': parsed.get('needs_ticket', False)})
+            clean = text.replace('```json','').replace('```','').strip()
+            # Find JSON object in response
+            import re
+            match = re.search(r'\{.*\}', clean, re.DOTALL)
+            if match:
+                parsed = json.loads(match.group())
+                return jsonify({'ok': True, 'text': parsed.get('text',''), 'needs_ticket': parsed.get('needs_ticket', False)})
+            else:
+                return jsonify({'ok': True, 'text': clean, 'needs_ticket': False})
         except:
             return jsonify({'ok': True, 'text': text, 'needs_ticket': False})
     except Exception as e:
