@@ -171,7 +171,7 @@ nav {
 .toggle-label { font-size: 13px; color: #9CA3AF; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
 .toggle-label.active { background: var(--purple); color: white; }
 .toggle-save { font-size: 11px; background: var(--green); color: var(--dark); padding: 2px 7px; border-radius: 999px; font-weight: 700; margin-left: 4px; }
-.pricing-grid-v2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1rem; max-width: 1000px; margin-left: auto; margin-right: auto; }
+.pricing-grid-v2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1rem; max-width: 1000px; margin-left: auto; margin-right: auto; align-items: stretch; }
 .price-card-v2 { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 2.25rem; text-align: left; position: relative; transition: all 0.25s; }
 .price-card-v2:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.2); }
 .price-card-v2.featured { background: linear-gradient(160deg, rgba(108,71,255,0.18), rgba(108,71,255,0.03)); border-color: rgba(108,71,255,0.5); box-shadow: 0 20px 60px rgba(108,71,255,0.15); }
@@ -459,31 +459,29 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
       <span class="toggle-label" id="toggle-yearly" onclick="setBilling('yearly')">Anual <span class="toggle-save">-20%</span></span>
     </div>
     <div class="pricing-grid-v2">
-      <div class="price-card-v2">
+      <div class="price-card-v2" style="display:flex;flex-direction:column;">
         <div class="pcv2-name">Demo</div>
         <div class="pcv2-amount"><span>$</span>0</div>
         <div class="pcv2-period">una sola vez</div>
-        <ul class="pcv2-features">
+        <ul class="pcv2-features" style="flex:1;">
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
           <li><span class="pcv2-check">✓</span> 1 análisis personalizado con gráficos</li>
-          <li><span class="pcv2-check">✓</span> Contexto de mercado actualizado</li>
           <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Chat ilimitado con tu asesor IA</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Cartera personalizada con proyecciones</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Memoria entre sesiones, mes a mes</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Análisis de mercado en tiempo real</li>
-          <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento mensual de inversiones</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
         </ul>
-        <a href="/register" class="btn-pcv2 outline">Probar gratis</a>
+        <a href="/register" class="btn-pcv2 outline" style="margin-top:auto;">Probar gratis</a>
       </div>
-      <div class="price-card-v2 featured">
+      <div class="price-card-v2 featured" style="display:flex;flex-direction:column;">
         <div class="pcv2-badge purple">Más popular</div>
         <div class="pcv2-name">Pro</div>
         <div class="pcv2-amount" id="price-pro"><span>U$S</span>8</div>
         <div class="pcv2-period" id="period-pro">por mes</div>
-        <ul class="pcv2-features">
+        <ul class="pcv2-features" style="flex:1;">
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
           <li><span class="pcv2-check">✓</span> Chat ilimitado con tu asesor IA</li>
           <li><span class="pcv2-check">✓</span> Cartera personalizada con proyecciones</li>
@@ -494,14 +492,14 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
         </ul>
-        <a href="/register" class="btn-pcv2 filled">Empezar ahora</a>
+        <a href="/register" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
       </div>
-      <div class="price-card-v2 advanced">
+      <div class="price-card-v2 advanced" style="display:flex;flex-direction:column;">
         <div class="pcv2-badge green">Avanzado</div>
         <div class="pcv2-name">Advanced</div>
         <div class="pcv2-amount" id="price-adv"><span>U$S</span>21</div>
         <div class="pcv2-period" id="period-adv">por mes</div>
-        <ul class="pcv2-features">
+        <ul class="pcv2-features" style="flex:1;">
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
           <li><span class="pcv2-check">✓</span> Chat ilimitado con tu asesor IA</li>
           <li><span class="pcv2-check">✓</span> Cartera personalizada con proyecciones</li>
@@ -512,7 +510,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Control financiero personal</li>
           <li><span class="pcv2-check">✓</span> Panel de inversiones actualizable</li>
         </ul>
-        <a href="/register" class="btn-pcv2 filled-green">Empezar ahora</a>
+        <a href="/register" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
       </div>
     </div>
     </div>
@@ -557,7 +555,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
   <div class="section-inner" style="text-align:center;">
     <div class="section-tag">Preguntas frecuentes</div>
     <h2 class="section-title">Todo lo que necesitás saber</h2>
-    <p class="section-sub" style="margin:0 auto;">Si tenés otra duda, podés escribirnos directamente a <a href="mailto:soporte@invertia.ar" style="color:var(--purple);">soporte@invertia.ar</a></p>
+    <p class="section-sub" style="margin:0 auto;">Si tenés otra duda, chateá con <button onclick="toggleSupportLand()" style="background:none;border:none;color:#6C47FF;font-weight:600;cursor:pointer;font-size:17px;font-family:'Inter',sans-serif;padding:0;">Nova, nuestra asistente virtual →</button></p>
     <div class="faq-list">
       <div class="faq-item">
         <button class="faq-question" onclick="toggleFaq(this)">¿InvertIA me dice exactamente qué comprar?<span class="faq-icon"></span></button>
