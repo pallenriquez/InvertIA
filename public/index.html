@@ -785,8 +785,9 @@ function processTicket(text){
     setSOL(['Sí, enviar','Cancelar']);
   } else if(ticketStep==='confirm'){
     if(text==='Sí, enviar'){
+      const sentEmail=ticketData.email;
       ticketStep=null;ticketData={};
-      addSBL('✅ ¡Listo! El equipo va a revisar tu caso y te responderá a '+ticketData.email+' en menos de 24hs. ¡Gracias!');
+      addSBL('✅ ¡Listo! El equipo va a revisar tu caso y te responderá a '+sentEmail+' en menos de 24hs. ¡Gracias!');
     } else {
       ticketStep=null;ticketData={};
       addSBL('Cancelado. ¿Hay algo más en lo que te pueda ayudar?');
