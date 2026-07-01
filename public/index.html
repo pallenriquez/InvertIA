@@ -730,8 +730,8 @@ function pickSOL(o){addSUL(o);document.getElementById('support-opts-land').inner
 function sendSupportLand(){const i=document.getElementById('sinput-land');const t=i.value.trim();if(!t)return;i.value='';addSUL(t);document.getElementById('support-opts-land').innerHTML='';handleNovaInput(t);}
 
 function initSupportLand(){
-  setTimeout(()=>addSBL('¡Hola! 👋 Soy Nova, la asistente virtual de InvertIA. ¿En qué te puedo ayudar hoy?'),300);
-  setTimeout(()=>setSOL(['¿Cómo funciona InvertIA?','¿Cuáles son los planes?','Tengo un problema técnico','Otra consulta']),800);
+  setTimeout(()=>addSBL('¡Hola! 👋 Soy Nova, la asistente virtual de InvertIA. Puedo responder tus dudas sobre planes, funcionalidades y cómo empezar. ¿En qué te puedo ayudar?'),300);
+  setTimeout(()=>setSOL(['¿Cómo funciona InvertIA?','¿Cuáles son los planes?','Tengo un problema técnico','Otra consulta']),900);
 }
 
 // Ticket flow state
