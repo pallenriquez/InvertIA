@@ -829,7 +829,24 @@ async function sendChat(){
   if(pendingFile)removeFile();
 
   if(chatState==='await_capital'){
+    // Check if currency is ambiguous (just numbers without currency indicator)
+    const hasCurrency = /usd|dolar|dólar|u\$s|us\$|\$/i.test(txt) || /peso|ars|pesos/i.test(txt);
+    const hasNumber = /\d/.test(txt);
+    if(hasNumber && !hasCurrency){
+      // Ask for clarification
+      uCapital=txt;chatState='await_capital_currency';showTyping();
+      setTimeout(()=>{removeTyping();addAI('¿Ese monto es en pesos argentinos o en dólares?');document.getElementById('chat-send-btn').disabled=false;},600);
+      return;
+    }
     uCapital=txt;chatState='await_objetivo';showTyping();
+    setTimeout(()=>{removeTyping();addAI('¿Cuál es tu objetivo financiero? Por ejemplo: comprar una casa, un auto, hacer un viaje, ahorrar para el retiro, o hacer crecer tus ahorros.');document.getElementById('chat-send-btn').disabled=false;},700);
+    return;
+  }
+  if(chatState==='await_capital_currency'){
+    // Append currency clarification to capital
+    const inPesos = /peso|ars|pesos/i.test(txt);
+    uCapital = uCapital + (inPesos?' pesos argentinos':' USD');
+    chatState='await_objetivo';showTyping();
     setTimeout(()=>{removeTyping();addAI('¿Cuál es tu objetivo financiero? Por ejemplo: comprar una casa, un auto, hacer un viaje, ahorrar para el retiro, o hacer crecer tus ahorros.');document.getElementById('chat-send-btn').disabled=false;},700);
     return;
   }
