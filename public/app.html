@@ -422,6 +422,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 
     <!-- CHAT TAB -->
     <div id="tab-chat">
+    <div id="profile-section-inner">
 
     <!-- FIN PANEL -->
     <div id="fin-panel" class="fin-panel" style="display:none;">
@@ -444,39 +445,61 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 
     <!-- GOAL TAB -->
     <div id="tab-goal" style="display:none;">
-      <div class="goal-dashboard" style="margin-bottom:0;">
-        <div class="goal-dashboard-header">
-          <div class="goal-title">🎯 <span id="goal-name">Mi objetivo</span></div>
-          <div class="goal-time-badge" id="goal-time-badge">—</div>
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;" id="goal-desc-txt">Seguí chateando con tu asesor para ver el progreso aquí.</div>
-        <div class="goal-amounts">
-          <div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Proyección acumulada</div>
-            <div class="goal-current" id="goal-current-val">USD 0</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;text-align:center;">
+
+        <!-- Big emoji -->
+        <div id="goal-emoji-big" style="font-size:64px;margin-bottom:.75rem;line-height:1;">🎯</div>
+        <h2 id="goal-name" style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:.25rem;">Mi objetivo</h2>
+        <div id="goal-time-badge" style="display:inline-block;font-size:12px;background:var(--purple-light);color:var(--purple);padding:4px 14px;border-radius:999px;font-weight:600;margin-bottom:1.75rem;">—</div>
+
+        <!-- Progress ring area -->
+        <div style="position:relative;width:140px;height:140px;margin:0 auto 1.5rem;">
+          <svg width="140" height="140" style="transform:rotate(-90deg);">
+            <circle cx="70" cy="70" r="58" fill="none" stroke="var(--border)" stroke-width="12"/>
+            <circle id="goal-ring" cx="70" cy="70" r="58" fill="none" stroke="var(--green)" stroke-width="12"
+              stroke-dasharray="364" stroke-dashoffset="364" stroke-linecap="round"
+              style="transition:stroke-dashoffset 1.2s ease;"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div id="goal-pct-big" style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--text);line-height:1;">—</div>
+            <div style="font-size:11px;color:var(--text2);">del plan</div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">Meta</div>
-            <div style="font-size:16px;font-weight:700;color:var(--text);" id="goal-target-val">USD —</div>
+        </div>
+
+        <!-- Amounts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+          <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Proyectado a la fecha</div>
+            <div id="goal-current-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--purple);">—</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta</div>
+            <div id="goal-target-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);">—</div>
           </div>
         </div>
-        <div class="goal-bar-bg"><div class="goal-bar-fill" id="goal-bar-fill" style="width:0%"></div></div>
-        <div class="goal-meta">
-          <span id="goal-pct-label">0% completado</span>
-          <span id="goal-remaining-label">Falta: —</span>
+
+        <!-- Falta -->
+        <div id="goal-remaining-wrap" style="background:rgba(0,196,140,.08);border:1px solid rgba(0,196,140,.2);border-radius:12px;padding:.875rem;margin-bottom:1.25rem;display:none;">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">Para llegar a tu meta te falta acumular</div>
+          <div id="goal-remaining-label" style="font-size:20px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;">—</div>
         </div>
-        <div id="goal-extra-info" style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);display:none;">
+
+        <!-- Extra cards -->
+        <div id="goal-extra-info" style="display:none;border-top:1px solid var(--border);padding-top:1.25rem;margin-top:.25rem;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
             <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
-              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Inversión mensual</div>
-              <div style="font-size:20px;font-weight:700;color:var(--purple);font-family:'Space Grotesk',sans-serif;" id="goal-cap-mensual">—</div>
+              <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Inversión mensual</div>
+              <div id="goal-cap-mensual" style="font-size:18px;font-weight:700;color:var(--purple);font-family:'Space Grotesk',sans-serif;">—</div>
             </div>
             <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
-              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Plazo estimado</div>
-              <div style="font-size:20px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;" id="goal-plazo">—</div>
+              <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Plazo estimado</div>
+              <div id="goal-plazo" style="font-size:18px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;">—</div>
             </div>
           </div>
         </div>
+
+        <!-- Pending state -->
+        <div id="goal-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;">Seguí chateando con tu asesor para ver el progreso aquí.</div>
       </div>
     </div>
 
@@ -571,6 +594,9 @@ function switchTab(tab){
   const isChat = tab==='chat';
   document.getElementById('tab-chat').style.display = isChat?'block':'none';
   document.getElementById('tab-goal').style.display = isChat?'none':'block';
+  // Hide profile section (scores/badge) when on goal tab
+  const ps = document.getElementById('profile-section');
+  if(ps) ps.style.display = isChat?'block':'none';
   const chatBtn = document.getElementById('tab-chat-btn');
   const goalBtn = document.getElementById('tab-goal-btn');
   chatBtn.style.background = isChat?'var(--card)':'transparent';
@@ -580,7 +606,7 @@ function switchTab(tab){
   goalBtn.style.color = isChat?'var(--text2)':'var(--text)';
   goalBtn.style.boxShadow = isChat?'none':'0 1px 4px var(--shadow)';
   if(!isChat)document.getElementById('chat-input-area').style.display='none';
-  else if(chatState==='chatting'||chatState==='await_capital'||chatState==='await_objetivo')document.getElementById('chat-input-area').style.display='block';
+  else if(chatState==='chatting'||chatState==='await_capital'||chatState==='await_objetivo'||chatState==='await_capital_currency')document.getElementById('chat-input-area').style.display='block';
 }
 
 // GOAL TOAST
@@ -721,46 +747,64 @@ function showReturningUser(days){
 }
 
 // ===== GOAL DASHBOARD =====
+const GOAL_EMOJIS = {
+  'casa':'🏠','depto':'🏠','departamento':'🏠','inmueble':'🏠','vivienda':'🏠',
+  'auto':'🚗','coche':'🚗','vehiculo':'🚗',
+  'viaje':'✈️','vacaciones':'✈️','viajes':'✈️',
+  'retiro':'🧓','jubilacion':'🧓','jubilación':'🧓',
+  'ahorro':'💰','ahorrar':'💰','crecer':'📈','invertir':'📈',
+  'negocio':'💼','empresa':'💼',
+  'educacion':'🎓','educación':'🎓','estudio':'🎓'
+};
+function getGoalEmoji(objetivo){
+  if(!objetivo)return '🎯';
+  const low=objetivo.toLowerCase();
+  for(const [k,v] of Object.entries(GOAL_EMOJIS)){if(low.includes(k))return v;}
+  return '🎯';
+}
+
 function updateGoalDashboard(){
   if(!uObjMonto)return;
   const objetivoLabel=uObjetivo||'Mi objetivo';
+  const emoji=getGoalEmoji(objetivoLabel);
 
-  // Show tab bar
   document.getElementById('tab-bar').style.display='block';
-
-  // Update goal name and description
+  document.getElementById('goal-emoji-big').textContent=emoji;
   document.getElementById('goal-name').textContent=objetivoLabel;
-  document.getElementById('goal-desc-txt').textContent=`Tu plan para: ${objetivoLabel}.`;
   document.getElementById('goal-target-val').textContent=`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+  document.getElementById('goal-pending').style.display='none';
 
-  // Plazo badge
   if(uObjPlazo){
     const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
     document.getElementById('goal-time-badge').textContent=a>0?`${a}a${m>0?' '+m+'m':''} estimado`:`${m}m estimado`;
   }
 
-  // Don't show fake accumulated amount - show capital mensual × plazo only if both exist
-  // and make it clear this is the PLAN, not current savings
   if(uCapMensual&&uObjPlazo){
-    const acumConRendimiento=uCapMensual*uObjPlazo; // simple accumulation without returns
-    const pct=Math.min(Math.round((acumConRendimiento/uObjMonto)*100),100);
-    const falta=Math.max(0,uObjMonto-acumConRendimiento);
-    document.getElementById('goal-current-val').textContent=`USD ${acumConRendimiento.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-    document.getElementById('goal-pct-label').textContent=`${pct}% del plan cumplido`;
-    document.getElementById('goal-remaining-label').textContent=`Falta acumular: USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-    setTimeout(()=>document.getElementById('goal-bar-fill').style.width=pct+'%',100);
+    // Projected accumulation = monthly capital × months (simple, no returns)
+    const acum=uCapMensual*uObjPlazo;
+    const pct=Math.min(Math.round((acum/uObjMonto)*100),100);
+    const falta=Math.max(0,uObjMonto-acum);
+
+    document.getElementById('goal-current-val').textContent=`USD ${acum.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+    document.getElementById('goal-pct-big').textContent=pct+'%';
+
+    // Animate ring: circumference = 2*PI*58 ≈ 364
+    const offset=Math.round(364*(1-pct/100));
+    setTimeout(()=>{document.getElementById('goal-ring').style.strokeDashoffset=offset;},200);
+
+    document.getElementById('goal-remaining-label').textContent=`USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+    document.getElementById('goal-remaining-wrap').style.display='block';
 
     document.getElementById('goal-extra-info').style.display='block';
     document.getElementById('goal-cap-mensual').textContent=`USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes`;
-    if(uObjPlazo){const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;document.getElementById('goal-plazo').textContent=a>0?`${a} año${a>1?'s':''}${m>0?' '+m+'m':''}`:m+'m';}
+    const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
+    document.getElementById('goal-plazo').textContent=a>0?`${a} año${a>1?'s':''}${m>0?' '+m+'m':''}`:m+'m';
   } else {
-    // Not enough data yet — show placeholder
     document.getElementById('goal-current-val').textContent='—';
-    document.getElementById('goal-pct-label').textContent='Seguí chateando para ver la proyección';
-    document.getElementById('goal-remaining-label').textContent='';
+    document.getElementById('goal-pct-big').textContent='—';
+    document.getElementById('goal-pending').style.display='block';
   }
 
-  // Show toast notification
   setTimeout(showGoalToast, 600);
 }
 
@@ -904,10 +948,12 @@ async function doChat(msg){
     }
     if(data.financialUpdate&&userData.plan==='advanced')updateFinPanel(data.financialUpdate);
     if(data.instruments&&data.instruments.length>0){
-      const real=data.instruments.filter(i=>i.pct>0);
-      if(real.length>0){setTimeout(()=>renderPie(real),100);}
-      real.forEach((inst,i)=>setTimeout(()=>renderInst(inst),i*80+200));
-      const proj=data.instruments.find(i=>i.data&&i.data.length>12&&i.pct===0);
+      // Filter out generic/invalid instruments
+      const GENERIC = ['proyeccion acumulada','proyección acumulada','total','acumulado'];
+      const real=data.instruments.filter(i=>i.pct>0 && !GENERIC.includes((i.name||'').toLowerCase().trim()));
+      if(real.length>=2){setTimeout(()=>renderPie(real),100);}
+      if(real.length>=2){real.forEach((inst,i)=>setTimeout(()=>renderInst(inst),i*80+200));}
+      const proj=data.instruments.find(i=>i.data&&i.data.length>6&&i.pct===0);
       if(proj)setTimeout(()=>renderProj(proj),real.length*80+300);
     }
   }catch(e){removeTyping();document.getElementById('chat-send-btn').disabled=false;addAI('Error: '+e.message);console.error('doChat error:',e);}
