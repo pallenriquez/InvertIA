@@ -375,9 +375,9 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 <!-- STICKY TAB BAR -->
 <div id="tab-bar" style="display:none;position:sticky;top:57px;z-index:150;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 1.5rem;">
   <div style="max-width:720px;margin:0 auto;display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
-    <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
-    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
-    <button id="tab-fin-btn" onclick="switchTab('fin')" style="flex:1;display:none;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💰 Finanzas</button>
+    <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
+    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
+    <button id="tab-fin-btn" onclick="switchTab('fin')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💰 Finanzas</button>
   </div>
 </div>
 
@@ -490,7 +490,16 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     <!-- FIN TAB (solo plan Advanced) -->
     <div id="tab-fin" style="display:none;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;">
-        <h2 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:1.25rem;">💰 Tus finanzas</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem;">
+          <h2 style="font-size:20px;font-weight:700;color:var(--text);">💰 Tus finanzas</h2>
+          <select id="fin-period-select" style="display:none;padding:6px 10px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text);font-size:13px;font-family:'Inter',sans-serif;"></select>
+        </div>
+
+        <div id="fin-savings-wrap" style="display:none;background:linear-gradient(135deg,rgba(0,196,140,.1),rgba(0,196,140,.03));border:1px solid rgba(0,196,140,.25);border-radius:14px;padding:1rem;margin-bottom:1rem;text-align:center;">
+          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Tasa de ahorro</div>
+          <div id="fin-savings-rate" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--green);">—</div>
+          <div id="fin-savings-compare" style="font-size:12px;margin-top:4px;"></div>
+        </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
@@ -508,13 +517,30 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           <div id="fin-balance-val" style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--purple-dark);">—</div>
         </div>
 
-        <div id="fin-fijos-section" style="margin-bottom:1.5rem;display:none;">
+        <!-- Donut de categorias -->
+        <div id="fin-chart-section" style="margin-bottom:1.75rem;display:none;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.85rem;">📊 En qué se va tu plata</div>
+          <div class="pie-inner">
+            <div class="pie-box"><canvas id="fin-donut"></canvas></div>
+            <div class="pie-legend" id="fin-donut-legend"></div>
+          </div>
+        </div>
+
+        <!-- Gastos fijos agrupados por subcategoria -->
+        <div id="fin-fijos-section" style="margin-bottom:1.75rem;display:none;">
           <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">📌 Gastos fijos</div>
           <div id="fin-fijos-list"></div>
         </div>
 
+        <!-- Total destacado de gastos hormiga -->
+        <div id="fin-hormiga-total-wrap" style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);border-radius:14px;padding:1rem;margin-bottom:1rem;display:none;">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">🐜 Total en gastos hormiga este mes</div>
+          <div id="fin-hormiga-total-val" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#EA580C;">—</div>
+          <div id="fin-hormiga-total-pct" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+        </div>
+
         <div id="fin-hormiga-section" style="margin-bottom:.5rem;display:none;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">🐜 Gastos hormiga</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">🐜 Gastos hormiga, agrupados</div>
           <div id="fin-hormiga-list"></div>
           <div style="font-size:11px;color:var(--text2);margin-top:.6rem;line-height:1.5;">Gastos chicos y recurrentes que suelen pasar desapercibidos, pero suman.</div>
         </div>
@@ -615,6 +641,7 @@ function closeConfigAndClearChat(){document.getElementById('config-dropdown').cl
 // TABS
 function switchTab(tab){
   const isChat = tab==='chat';
+  if(tab==='fin' && !finHistoryLoaded && userData && userData.plan==='advanced'){finHistoryLoaded=true;loadFinHistory();}
   ['chat','goal','fin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = (t===tab)?'block':'none';
@@ -639,7 +666,7 @@ function switchTab(tab){
 }
 
 // GOAL TOAST
-let goalToastShown = false, finToastShown = false;
+let goalToastShown = false, finToastShown = false, finHistoryLoaded = false;
 function showAppToast(title,msg){
   document.getElementById('goal-toast-title').textContent = title;
   document.getElementById('goal-toast-msg').textContent = msg;
@@ -856,7 +883,7 @@ function updateGoalDashboard(){
   if(uCapMensual&&uObjPlazo){
     const retornoAnual=uObjRetorno||7;
     etaNote.style.display='block';
-    etaNote.textContent=`💡 A este ritmo (USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes, ~${retornoAnual}% anual estimado de rendimiento), llegarías a tu meta en ${formatDuration(uObjPlazo)}.`;
+    etaNote.textContent=`💡 Proyectado según el mercado: si invertís USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes con un rendimiento estimado de ~${retornoAnual}% anual, llegarías a tu meta en ${formatDuration(uObjPlazo)}. (Esto es una estimación, no reemplaza el número real de arriba.)`;
   } else {
     etaNote.style.display='none';
   }
@@ -878,6 +905,24 @@ function updateGoalBasic(){
 }
 
 // ===== FIN DASHBOARD (pestaña Finanzas, solo plan Advanced) =====
+function groupTotal(group){return Object.values(group||{}).reduce((s,v)=>s+(Number(v)||0),0);}
+function isNestedGroup(obj){const vals=Object.values(obj||{});return vals.length>0&&vals.every(v=>typeof v==='object'&&v!==null);}
+function renderGroupedList(containerId,data){
+  const el=document.getElementById(containerId);
+  const entries=Object.entries(data||{});
+  if(!entries.length){el.innerHTML='';return;}
+  if(!isNestedGroup(data)){
+    // Formato viejo (plano), por compatibilidad con datos guardados antes de agrupar por subcategoria
+    el.innerHTML=entries.map(([k,v])=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
+    return;
+  }
+  el.innerHTML=entries.map(([subcat,items])=>{
+    const total=groupTotal(items);
+    const itemsHtml=Object.entries(items||{}).map(([k,v])=>`<div class="fin-cat-item" style="padding-left:.75rem;"><span style="color:var(--text2);">${k}</span><span>$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
+    return `<div style="margin-bottom:.5rem;"><div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;color:var(--text);border-bottom:1.5px solid var(--border);"><span>${subcat}</span><span>$${total.toLocaleString('es-AR')}</span></div>${itemsHtml}</div>`;
+  }).join('');
+}
+
 function updateFinPanel(fin){
   if(!fin||(fin.ingresos==null&&fin.egresos==null))return;
   document.getElementById('tab-bar').style.display='block';
@@ -892,14 +937,83 @@ function updateFinPanel(fin){
   const fijos=fin.categorias||{};
   const fijosKeys=Object.keys(fijos);
   document.getElementById('fin-fijos-section').style.display=fijosKeys.length?'block':'none';
-  document.getElementById('fin-fijos-list').innerHTML=fijosKeys.map(k=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(fijos[k]||0).toLocaleString('es-AR')}</span></div>`).join('');
+  renderGroupedList('fin-fijos-list',fijos);
+
+  // Donut de categorias (solo si hay subcategorias agrupadas)
+  const chartSection=document.getElementById('fin-chart-section');
+  if(fijosKeys.length>=2 && isNestedGroup(fijos)){
+    chartSection.style.display='block';
+    const totals=fijosKeys.map(k=>groupTotal(fijos[k]));
+    const totalSum=totals.reduce((a,b)=>a+b,0)||1;
+    document.getElementById('fin-donut-legend').innerHTML=fijosKeys.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${PIE_COLORS[i%5]}"></div><span class="leg-name">${l}</span><span class="leg-pct">${Math.round(totals[i]/totalSum*100)}%</span></div>`).join('');
+    setTimeout(()=>{
+      const ctx=document.getElementById('fin-donut').getContext('2d');
+      if(window._finChartInstance) window._finChartInstance.destroy();
+      window._finChartInstance=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:totals,backgroundColor:PIE_COLORS.slice(0,fijosKeys.length),borderWidth:2,borderColor:'transparent'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},cutout:'58%'}});
+    },100);
+  } else {
+    chartSection.style.display='none';
+  }
 
   const hormiga=fin.gastosHormiga||{};
   const hormigaKeys=Object.keys(hormiga);
   document.getElementById('fin-hormiga-section').style.display=hormigaKeys.length?'block':'none';
-  document.getElementById('fin-hormiga-list').innerHTML=hormigaKeys.map(k=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(hormiga[k]||0).toLocaleString('es-AR')}</span></div>`).join('');
+  renderGroupedList('fin-hormiga-list',hormiga);
 
+  const hormigaTotal=isNestedGroup(hormiga)
+    ? hormigaKeys.reduce((s,k)=>s+groupTotal(hormiga[k]),0)
+    : hormigaKeys.reduce((s,k)=>s+(Number(hormiga[k])||0),0);
+  const hormigaWrap=document.getElementById('fin-hormiga-total-wrap');
+  if(hormigaKeys.length){
+    hormigaWrap.style.display='block';
+    document.getElementById('fin-hormiga-total-val').textContent=`$${hormigaTotal.toLocaleString('es-AR')}`;
+    document.getElementById('fin-hormiga-total-pct').textContent=egresos>0?`${Math.round(hormigaTotal/egresos*100)}% de tus egresos totales`:'';
+  } else {
+    hormigaWrap.style.display='none';
+  }
+
+  updateSavingsRateCard(ingresos,egresos,fin.period);
   setTimeout(showFinToast, 600);
+}
+
+// ===== TASA DE AHORRO Y COMPARACION MES A MES =====
+function updateSavingsRateCard(ingresos,egresos,forPeriod){
+  const wrap=document.getElementById('fin-savings-wrap');
+  if(!wrap||!ingresos)return;
+  const rate=Math.round(((ingresos-egresos)/ingresos)*100);
+  document.getElementById('fin-savings-rate').textContent=rate+'%';
+  wrap.style.display='block';
+  const cmp=document.getElementById('fin-savings-compare');
+  if(finHistory && finHistory.length>=2){
+    // Comparar contra el mes anterior al periodo que se esta mostrando (o al ultimo si no se especifica uno)
+    const idx=forPeriod?finHistory.findIndex(p=>p.period===forPeriod):finHistory.length-1;
+    const prev=idx>0?finHistory[idx-1]:null;
+    if(prev && prev.savingsRate!=null){
+      const diff=rate-prev.savingsRate;
+      if(diff>0){cmp.textContent=`🎉 ¡Aumentaste tu ahorro ${diff} puntos respecto a ${prev.periodLabel}!`;cmp.style.color='var(--green)';}
+      else if(diff<0){cmp.textContent=`Bajó ${Math.abs(diff)} puntos respecto a ${prev.periodLabel}.`;cmp.style.color='#EF4444';}
+      else{cmp.textContent=`Igual que ${prev.periodLabel}.`;cmp.style.color='var(--text2)';}
+    } else { cmp.textContent=''; }
+  } else { cmp.textContent=''; }
+}
+
+let finHistory=[];
+async function loadFinHistory(){
+  try{
+    const res=await fetch('/api/financial-history');
+    const data=await res.json();
+    if(!data.ok||!data.periods||!data.periods.length)return;
+    finHistory=data.periods; // ordenados ascendente por periodo
+    const sel=document.getElementById('fin-period-select');
+    sel.innerHTML=finHistory.map(p=>`<option value="${p.period}">${p.periodLabel}</option>`).join('');
+    sel.value=finHistory[finHistory.length-1].period;
+    sel.style.display='inline-block';
+    sel.onchange=()=>{
+      const chosen=finHistory.find(p=>p.period===sel.value);
+      if(chosen)updateFinPanel(chosen);
+    };
+    updateSavingsRateCard(finHistory[finHistory.length-1].ingresos,finHistory[finHistory.length-1].egresos,finHistory[finHistory.length-1].period);
+  }catch(e){console.warn('financial-history error:',e);}
 }
 
 // ===== QUIZ =====
@@ -1135,7 +1249,7 @@ async function restart(){
   try{await fetch('/api/reset-profile',{method:'POST'});}catch(e){console.warn('reset-profile error:',e);}
   cur=0;ans=new Array(Qs.length).fill(null);
   rProfile=null;rScores=null;uCapital='';uObjetivo='';uObjMonto=null;uObjPlazo=null;uCapMensual=null;uObjRetorno=null;uObjAhorrado=null;chatState='initial';
-  goalToastShown=false;finToastShown=false;
+  goalToastShown=false;finToastShown=false;finHistoryLoaded=false;finHistory=[];
   document.getElementById('step-result').classList.remove('active');document.getElementById('step-welcome').classList.add('active');
   document.getElementById('chat-messages').innerHTML='';document.getElementById('demo-limit-box').style.display='none';
   document.getElementById('profile-section').style.display='block';document.getElementById('context-bar').style.display='none';
