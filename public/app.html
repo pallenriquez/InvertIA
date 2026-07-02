@@ -992,7 +992,10 @@ async function sendChat(){
   if(!txt&&!pendingFile)return;
   inp.value='';inp.style.height='auto';document.getElementById('chat-send-btn').disabled=true;
   const attachedFile=pendingFile;
-  addUser(attachedFile?(txt||'(archivo adjunto)')+` [📎 ${attachedFile.name}]`:txt);
+  const isImg=attachedFile&&attachedFile.type&&attachedFile.type.startsWith('image/');
+  const previewUrl=isImg?URL.createObjectURL(attachedFile):null;
+  const bubbleText=(attachedFile&&!isImg)?(txt||'')+` [📎 ${attachedFile.name}]`:txt;
+  addUser(bubbleText,previewUrl);
   if(pendingFile)removeFile();
 
   if(chatState==='await_capital'){
@@ -1084,7 +1087,7 @@ async function doChat(msg,file){
 
 function addAI(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-ai';d.innerHTML=`<div class="msg-avatar">✦</div><div class="msg-bubble">${t.replace(/\n/g,'<br>')}</div>`;m.appendChild(d);scrollToBottom();}
 function scrollToBottom(){setTimeout(()=>{const m=document.getElementById('chat-messages');if(m){m.scrollTop=m.scrollHeight;window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}},80);}
-function addUser(t){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-user';d.innerHTML=`<div class="msg-bubble">${t}</div><div class="msg-avatar">👤</div>`;m.appendChild(d);scrollToBottom();}
+function addUser(t,imgUrl){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-user';const imgHtml=imgUrl?`<img src="${imgUrl}" style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:${t?'6px':'0'};">`:'';d.innerHTML=`<div class="msg-bubble">${imgHtml}${t||''}</div><div class="msg-avatar">👤</div>`;m.appendChild(d);scrollToBottom();}
 function showTyping(){const m=document.getElementById('chat-messages');const d=document.createElement('div');d.className='msg msg-ai';d.id='typing-msg';d.innerHTML=`<div class="msg-avatar">✦</div><div class="typing-bubble"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>`;m.appendChild(d);m.scrollTop=m.scrollHeight;}
 function removeTyping(){const t=document.getElementById('typing-msg');if(t)t.remove();}
 
