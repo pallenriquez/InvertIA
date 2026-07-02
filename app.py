@@ -81,16 +81,23 @@ def init_db():
 
 init_db()
 
-def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=1000, retries=1):
+WEB_SEARCH_TOOLS = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+
+def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=1000, retries=1, tools=None):
     """Llama a la API de Anthropic. Si la respuesta trae un error transitorio
     (overloaded_error / rate_limit_error) reintenta una vez antes de rendirse.
-    Siempre loguea el detalle del error para poder diagnosticarlo en los logs de Render."""
+    Siempre loguea el detalle del error para poder diagnosticarlo en los logs de Render.
+    Si se pasa 'tools' (ej: WEB_SEARCH_TOOLS), el modelo puede buscar en la web
+    antes de responder (util para cotizaciones, tasas o noticias de mercado actuales)."""
     result = {}
     for attempt in range(retries + 1):
+        payload = {'model':model,'max_tokens':max_tokens,'system':system,'messages':messages}
+        if tools:
+            payload['tools'] = tools
         resp = requests.post(
             'https://api.anthropic.com/v1/messages',
             headers={'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},
-            json={'model':model,'max_tokens':max_tokens,'system':system,'messages':messages},
+            json=payload,
             timeout=55
         )
         result = resp.json()
@@ -102,6 +109,14 @@ def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=
             continue
         break
     return result
+
+def extract_text(result):
+    """Concatena todos los bloques de tipo 'text' de la respuesta, en orden.
+    Necesario cuando se usan tools server-side (como web_search): la respuesta
+    trae bloques intercalados (server_tool_use, web_search_tool_result, text...)
+    y el texto final puede estar partido en varios bloques de texto."""
+    blocks = result.get('content', []) or []
+    return ''.join(b.get('text','') for b in blocks if b.get('type') == 'text').strip()
 
 def save_msg(uid, role, content):
     conn = get_db()
@@ -241,18 +256,21 @@ def recommend():
         conn.close(); return jsonify({'ok':False,'error':'demo_limit'})
     d = request.json or {}
     profile,scores,name = d.get('profile',''),d.get('scores',[0,0,0]),user['name']
-    prompt = (f"Sos un asesor financiero argentino experto. Usas el voseo. Directo, profesional y claro. Sin asteriscos ni markdown.\n"
-        f"El usuario se llama {name}, perfil {profile} (Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%).\n"
-        f"Mercado julio 2026: inflacion ~2% mensual bajando, dolar estable en bandas (~1700 ARS/USD), bolsa AR volatil, S&P500 alcista por tech, riesgo pais bajando.\n\n"
-        f"Responde:\n- 1 oracion saludando a {name} y validando su perfil\n- 2 oraciones sobre el mercado hoy\n"
+    system = ("Sos un asesor financiero argentino experto. Voseo. Directo, profesional y claro. Sin asteriscos ni markdown.\n"
+        "Antes de responder, buscá en la web las condiciones actuales del mercado argentino (inflacion mensual, "
+        "cotizacion del dolar, riesgo pais, indice Merval) y la tendencia reciente del S&P 500, para dar datos "
+        "reales y actualizados en vez de generalidades. Si la busqueda falla, seguí igual con tu mejor estimacion "
+        "pero sin inventar cifras exactas que no puedas respaldar.")
+    prompt = (f"El usuario se llama {name}, perfil {profile} (Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%).\n\n"
+        f"Responde:\n- 1 oracion saludando a {name} y validando su perfil\n- 2 oraciones sobre el mercado hoy (con datos concretos y actuales)\n"
         f"- 3 instrumentos numerados con nombre y por que encaja con su perfil\nMaximo 160 palabras. Sin preguntas al final.")
     try:
-        result = call_claude([{'role':'user','content':prompt}],'',model='claude-haiku-4-5-20251001',max_tokens=600)
+        result = call_claude([{'role':'user','content':prompt}],system,model='claude-haiku-4-5-20251001',max_tokens=800,tools=WEB_SEARCH_TOOLS)
         if 'error' in result:
             err = result.get('error', {})
             conn.close()
             return jsonify({'ok':False,'error':err.get('message','Error de conexión con la IA.'),'errorType':err.get('type')})
-        text = result.get('content',[{}])[0].get('text','').strip()
+        text = extract_text(result)
         if user['plan'] not in ('paid','advanced'):
             conn.execute('UPDATE users SET demo_used=demo_used+1 WHERE id=?',(session['user_id'],))
             conn.commit()
@@ -305,12 +323,13 @@ USA ---CHART--- SOLO en estos casos, y SIEMPRE en el mismo mensaje donde mencion
 (nunca lo anuncies para "despues"):
 1. Cuando presentes la distribucion de cartera por primera vez (2+ instrumentos con %)
 2. Cuando hagas una proyeccion comparativa (inversion actual vs aumentada)
-3. Cuando el usuario pida ver grafico, proyeccion, o mas detalle de los instrumentos ya mencionados
+3. Cuando el usuario pida explicitamente ver un grafico o una proyeccion NUEVA (con numeros distintos a los ya mostrados)
 
 NO uses ---CHART--- cuando:
 - Estes explicando el mercado o contexto
 - Estes haciendo preguntas sobre objetivos o capital
-- La cartera ya fue presentada antes en la misma sesion
+- La cartera ya fue presentada antes en la misma sesion, AUNQUE el usuario pida "mas detalle" de los instrumentos:
+  ese detalle va SOLO en texto (nombres concretos, tickers, como comprarlos), sin repetir el grafico de torta
 - Sea una respuesta corta o conversacional
 
 FORMATO cuando corresponde:
@@ -367,7 +386,16 @@ def chat():
         + ("IMPORTANTE: objetivo de alto valor, siempre en USD.\n" if high_ticket else "")
         + ("Plan Advanced: acceso a control financiero personal.\n" if is_advanced else
            "Plan Pro: si pregunta por control financiero/gastos/presupuesto, decile que es parte del plan Advanced.\n")
-        + "Mercado julio 2026: inflacion ~2% mensual, dolar estable ~1700 ARS/USD, bolsa AR volatil, S&P500 alcista, riesgo pais bajando.\n\n"
+        + "\n===== BUSQUEDA WEB =====\n"
+        "Tenes acceso a busqueda web. USALA cuando:\n"
+        "- El usuario pide instrumentos especificos (que bonos, que acciones, que ticker, que ON) → buscá los "
+        "instrumentos reales que cotizan hoy en Argentina/EEUU para esa categoria, con nombres y tickers concretos\n"
+        "- Preguntan por cotizaciones, tasas, riesgo pais, inflacion, o cualquier dato de mercado actual\n"
+        "- Vas a presentar o actualizar una cartera y no tenes certeza de que tu informacion de mercado este vigente\n"
+        "NO busques para preguntas conceptuales que ya podes responder bien (que es un CEDEAR, como funciona un bono, etc).\n"
+        "==========================\n\n"
+        + "Como referencia de base (usala solo si la busqueda web no trae algo mejor): inflacion ~2% mensual, "
+          "dolar estable ~1700 ARS/USD, bolsa AR volatil, S&P500 alcista, riesgo pais bajando.\n\n"
         "===== REGLA CRITICA: NUNCA ANUNCIES ALGO SIN ENTREGARLO YA =====\n"
         "PROHIBIDO terminar un mensaje diciendo que vas a mostrar, dar el detalle de, o presentar algo (una proyeccion, "
         "una cartera, un desglose, un grafico) sin haberlo incluido YA, completo, en ese mismo mensaje.\n"
@@ -391,8 +419,9 @@ def chat():
         "---CHART--- incluyendo data2 en el JSON. No lo pospongas para el siguiente turno.\n"
         "4. Cuando alineas expectativas → en ese MISMO mensaje presentar la cartera personalizada completa (nombres, "
         "porcentajes, montos en USD/mes) CON el bloque ---CHART--- obligatorio incluido ahi mismo.\n"
-        "5. Si el usuario pide 'mas detalle' de instrumentos ya presentados → en ese MISMO mensaje dar el detalle concreto "
-        "(que son, como se compran, por que encajan), sin anunciar que lo vas a hacer despues.\n"
+        "5. Si el usuario pide 'mas detalle' o nombres especificos de instrumentos ya presentados → buscá en la web si "
+        "hace falta, y en ese MISMO mensaje dá el detalle concreto (nombres reales, tickers, como se compran, por que "
+        "encajan) EN TEXTO, sin volver a incluir el bloque ---CHART--- (la cartera y el grafico ya se mostraron antes).\n"
         "6. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Querés que te explique cómo empezar con alguno de estos instrumentos?' o '¿Tenés alguna duda sobre la distribución?'\n"
         + CHART_SYSTEM_SUFFIX
     )
@@ -401,12 +430,12 @@ def chat():
     msgs.append({'role':'user','content':message})
 
     try:
-        result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=3000)
+        result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=4000,tools=WEB_SEARCH_TOOLS)
         if 'error' in result:
             err = result.get('error', {})
             conn.close()
             return jsonify({'ok':False,'error':err.get('message','Error de conexión con la IA.'),'errorType':err.get('type')})
-        full = result.get('content',[{}])[0].get('text','').strip()
+        full = extract_text(result)
         parts = full.split('---CHART---')
         text = parts[0].strip()
         instruments,obj_update,fin_update = [],[],None
@@ -471,7 +500,7 @@ def returning_greeting():
         f"Dale bienvenida personalizada mencionando algo de su contexto. {'Preguntale como le fue con sus inversiones el ultimo mes.' if days and days>=25 else 'Preguntale en que lo podes ayudar hoy.'} Maximo 2 oraciones.")
     try:
         result = call_claude([{'role':'user','content':prompt}],'',model='claude-haiku-4-5-20251001',max_tokens=150)
-        text = result.get('content',[{}])[0].get('text','').strip()
+        text = extract_text(result)
         save_msg(session['user_id'],'assistant',text)
         return jsonify({'ok':True,'text':text,'daysSinceLastVisit':days})
     except Exception as e: return jsonify({'ok':False,'error':str(e)})
@@ -499,7 +528,7 @@ FORMATO: SOLO JSON valido, sin texto antes ni despues, sin markdown:
     msgs.append({'role':'user','content':message})
     try:
         result = call_claude(msgs,system,model='claude-haiku-4-5-20251001',max_tokens=300)
-        text = result.get('content',[{}])[0].get('text','').strip()
+        text = extract_text(result)
         try:
             clean = re.sub(r'```json\s*','',text); clean = re.sub(r'```\s*','',clean).strip()
             match = re.search(r'\{[^{}]*"text"[^{}]*\}',clean,re.DOTALL)
