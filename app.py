@@ -263,14 +263,49 @@ def recommend():
     except Exception as e:
         conn.close(); return jsonify({'ok':False,'error':str(e)})
 
+def extract_first_json(text):
+    """Devuelve el primer objeto JSON balanceado dentro del texto, ignorando
+    cualquier cosa antes o después (el modelo a veces agrega comentarios
+    despues del bloque JSON, y eso rompe un json.loads estricto)."""
+    start = text.find('{')
+    if start == -1:
+        return None
+    depth = 0
+    in_str = False
+    esc = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == '\\':
+                esc = True
+            elif ch == '"':
+                in_str = False
+        else:
+            if ch == '"':
+                in_str = True
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:i+1]
+                    try:
+                        return json.loads(candidate)
+                    except Exception:
+                        return None
+    return None
+
 CHART_SYSTEM_SUFFIX = """
 
 ===== GRAFICOS =====
 
-USA ---CHART--- SOLO en estos casos:
+USA ---CHART--- SOLO en estos casos, y SIEMPRE en el mismo mensaje donde mencionas los instrumentos o la proyeccion
+(nunca lo anuncies para "despues"):
 1. Cuando presentes la distribucion de cartera por primera vez (2+ instrumentos con %)
 2. Cuando hagas una proyeccion comparativa (inversion actual vs aumentada)
-3. Cuando el usuario pida ver grafico o proyeccion
+3. Cuando el usuario pida ver grafico, proyeccion, o mas detalle de los instrumentos ya mencionados
 
 NO uses ---CHART--- cuando:
 - Estes explicando el mercado o contexto
@@ -333,16 +368,32 @@ def chat():
         + ("Plan Advanced: acceso a control financiero personal.\n" if is_advanced else
            "Plan Pro: si pregunta por control financiero/gastos/presupuesto, decile que es parte del plan Advanced.\n")
         + "Mercado julio 2026: inflacion ~2% mensual, dolar estable ~1700 ARS/USD, bolsa AR volatil, S&P500 alcista, riesgo pais bajando.\n\n"
+        "===== REGLA CRITICA: NUNCA ANUNCIES ALGO SIN ENTREGARLO YA =====\n"
+        "PROHIBIDO terminar un mensaje diciendo que vas a mostrar, dar el detalle de, o presentar algo (una proyeccion, "
+        "una cartera, un desglose, un grafico) sin haberlo incluido YA, completo, en ese mismo mensaje.\n"
+        "Ejemplos de mensajes PROHIBIDOS (anuncian pero no entregan):\n"
+        "  - 'Antes de darte el detalle, necesito mostrarte la proyeccion a 30 anos.' (¿y la proyeccion? no esta)\n"
+        "  - 'Perfecto. Aca va el detalle concreto de cada instrumento.' (¿y el detalle? no esta)\n"
+        "  - 'Dame un segundo que te preparo la cartera.'\n"
+        "Si vas a mostrar algo, el contenido real va inmediatamente a continuacion en el MISMO mensaje, nunca en el siguiente turno. "
+        "No existen 'pasos intermedios' de aviso: o lo mostras ahora, o todavia no lo menciones y en cambio hace la pregunta que "
+        "te falta para poder calcularlo.\n"
+        "==============================================================\n\n"
         "FLUJO:\n"
-        "1. Si menciona objetivo (casa/auto/viaje/retiro) y no tenemos plazo → dar contexto del plazo habitual y preguntar cuando lo quiere:\n"
+        "1. Si menciona objetivo (casa/auto/viaje/retiro) y no tenemos plazo → dar contexto del plazo habitual y preguntar cuando lo quiere, EN ESE MISMO MENSAJE:\n"
         "   - Casa/depto: 'Para una vivienda lo habitual es planificar entre 5 y 15 anos. ¿Vos para cuando lo tenias en mente?'\n"
         "   - Auto: 'Un auto generalmente se planifica entre 1 y 3 anos. ¿Cuando lo querias tener?'\n"
         "   - Viaje: 'Un viaje suele planificarse entre 6 meses y 2 anos. ¿Cuando lo tenias pensado?'\n"
         "   - Retiro: 'El retiro suele planificarse a 10-30 anos. ¿En que horizonte estas pensando?'\n"
-        "2. Cuando tenes capital + objetivo + plazo → calculá si es realista, si no alcanza sugerir aumentar inversion O estirar plazo\n"
-        "3. Si acepta aumentar inversion → mostrar proyeccion comparativa con data2 en el JSON\n"
-        "4. Cuando alineas expectativas → presentar cartera personalizada CON grafico obligatorio\n"
-        "5. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Querés que te explique cómo empezar con alguno de estos instrumentos?' o '¿Tenés alguna duda sobre la distribución?'\n"
+        "2. Cuando tenes capital + objetivo + plazo → en ese MISMO mensaje calculá si es realista (con los numeros concretos "
+        "ya calculados, no 'te lo calculo'), y si no alcanza sugerir aumentar inversion O estirar plazo, con cifras.\n"
+        "3. Si acepta aumentar inversion → en ese MISMO mensaje mostrar la proyeccion comparativa completa, con el bloque "
+        "---CHART--- incluyendo data2 en el JSON. No lo pospongas para el siguiente turno.\n"
+        "4. Cuando alineas expectativas → en ese MISMO mensaje presentar la cartera personalizada completa (nombres, "
+        "porcentajes, montos en USD/mes) CON el bloque ---CHART--- obligatorio incluido ahi mismo.\n"
+        "5. Si el usuario pide 'mas detalle' de instrumentos ya presentados → en ese MISMO mensaje dar el detalle concreto "
+        "(que son, como se compran, por que encajan), sin anunciar que lo vas a hacer despues.\n"
+        "6. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Querés que te explique cómo empezar con alguno de estos instrumentos?' o '¿Tenés alguna duda sobre la distribución?'\n"
         + CHART_SYSTEM_SUFFIX
     )
 
@@ -361,14 +412,14 @@ def chat():
         instruments,obj_update,fin_update = [],[],None
 
         if len(parts)>1:
-            try:
-                js = parts[1].strip().replace('```json','').replace('```','').strip()
-                parsed = json.loads(js)
+            js_raw = parts[1].strip().replace('```json','').replace('```','').strip()
+            parsed = extract_first_json(js_raw)
+            if parsed:
                 instruments = parsed.get('instruments',[])
                 obj_update = parsed.get('objetivoUpdate')
                 fin_update = parsed.get('financialUpdate')
-            except Exception as e:
-                print('Chart JSON parse error:',e,parts[1][:100])
+            else:
+                print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300])
 
         if obj_update:
             conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,updated_at)
