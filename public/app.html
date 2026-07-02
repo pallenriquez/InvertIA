@@ -452,7 +452,8 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         <!-- Big emoji -->
         <div id="goal-emoji-big" style="font-size:64px;margin-bottom:.75rem;line-height:1;">🎯</div>
         <h2 id="goal-name" style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:.25rem;">Mi objetivo</h2>
-        <div id="goal-time-badge" style="display:inline-block;font-size:12px;background:var(--purple-light);color:var(--purple);padding:4px 14px;border-radius:999px;font-weight:600;margin-bottom:1.75rem;">—</div>
+        <div id="goal-time-badge" style="display:inline-block;font-size:12px;background:var(--purple-light);color:var(--purple);padding:4px 14px;border-radius:999px;font-weight:600;margin-bottom:.6rem;">—</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1.15rem;">Así llegarías si mantenés este plan durante todo el plazo</div>
 
         <!-- Progress ring area -->
         <div style="position:relative;width:140px;height:140px;margin:0 auto 1.5rem;">
@@ -464,14 +465,14 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <div id="goal-pct-big" style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--text);line-height:1;">—</div>
-            <div style="font-size:11px;color:var(--text2);">del plan</div>
+            <div style="font-size:11px;color:var(--text2);">proyectado al final</div>
           </div>
         </div>
 
         <!-- Amounts -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
-            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Proyectado a la fecha</div>
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Proyección al final del plazo</div>
             <div id="goal-current-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--purple);">—</div>
           </div>
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
@@ -783,6 +784,14 @@ function getGoalEmoji(objetivo){
   for(const [k,v] of Object.entries(GOAL_EMOJIS)){if(low.includes(k))return v;}
   return '🎯';
 }
+function formatDuration(totalMeses){
+  if(!totalMeses||totalMeses<=0)return '—';
+  const a=Math.floor(totalMeses/12),m=totalMeses%12;
+  const parts=[];
+  if(a>0)parts.push(`${a} año${a>1?'s':''}`);
+  if(m>0)parts.push(`${m} mes${m>1?'es':''}`);
+  return parts.join(' ')||'menos de 1 mes';
+}
 
 function updateGoalDashboard(){
   if(!uObjMonto)return;
@@ -796,8 +805,7 @@ function updateGoalDashboard(){
   document.getElementById('goal-pending').style.display='none';
 
   if(uObjPlazo){
-    const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
-    document.getElementById('goal-time-badge').textContent=a>0?`${a}a${m>0?' '+m+'m':''} estimado`:`${m}m estimado`;
+    document.getElementById('goal-time-badge').textContent=formatDuration(uObjPlazo)+' estimado';
   }
 
   if(uCapMensual&&uObjPlazo){
@@ -818,8 +826,7 @@ function updateGoalDashboard(){
 
     document.getElementById('goal-extra-info').style.display='block';
     document.getElementById('goal-cap-mensual').textContent=`USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes`;
-    const a=Math.floor(uObjPlazo/12),m=uObjPlazo%12;
-    document.getElementById('goal-plazo').textContent=a>0?`${a} año${a>1?'s':''}${m>0?' '+m+'m':''}`:m+'m';
+    document.getElementById('goal-plazo').textContent=formatDuration(uObjPlazo);
   } else {
     document.getElementById('goal-current-val').textContent='—';
     document.getElementById('goal-pct-big').textContent='—';
