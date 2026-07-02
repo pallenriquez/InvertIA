@@ -130,7 +130,7 @@ def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=
         if 'error' not in result:
             return result
         err = result.get('error', {})
-        print(f'[Claude API error] attempt={attempt+1} type={err.get("type")} msg={err.get("message")}')
+        print(f'[Claude API error] attempt={attempt+1} type={err.get("type")} msg={err.get("message")}', flush=True)
         if err.get('type') in ('overloaded_error','rate_limit_error') and attempt < retries:
             continue
         break
@@ -632,7 +632,7 @@ def get_dolar_mep():
             _dolar_mep_cache['fetched_at'] = now
             return rate
     except Exception as e:
-        print('[dolar MEP fetch error]', e)
+        print('[dolar MEP fetch error]', e, flush=True)
     return _dolar_mep_cache['rate'] or 1500  # fallback si la API falla y no hay cache previo
 
 @app.route('/api/chat', methods=['POST'])
@@ -893,7 +893,7 @@ def chat():
                     else:
                         _last_portfolio_signature[session['user_id']] = sig
             else:
-                print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300])
+                print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300], flush=True)
 
         if obj_update:
             conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,objetivo_retorno_anual,objetivo_ahorrado_actual,updated_at)
@@ -937,7 +937,7 @@ def chat():
         conn.close()
         return jsonify({'ok':True,'text':text,'instruments':instruments,'objetivoUpdate':obj_update,'financialUpdate':fin_update})
     except Exception as e:
-        print('Chat error:',e); conn.close(); return jsonify({'ok':False,'error':str(e)})
+        print('Chat error:',repr(e), flush=True); conn.close(); return jsonify({'ok':False,'error':str(e)})
 
 @app.route('/api/reset-profile', methods=['POST'])
 def reset_profile():
