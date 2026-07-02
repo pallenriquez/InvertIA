@@ -236,6 +236,11 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 .btn-restart{background:var(--card);border:1.5px solid var(--border);color:var(--text2);padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
 .btn-restart:hover{border-color:var(--purple);color:var(--purple);}
 
+/* CLEAR CHAT */
+.clear-chat-bar{display:flex;justify-content:flex-end;margin-bottom:.5rem;}
+.btn-clear-chat{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
+.btn-clear-chat:hover{border-color:#EF4444;color:#EF4444;}
+
 /* SUPPORT */
 .support-fab{position:fixed;bottom:90px;right:24px;z-index:999;width:48px;height:48px;border-radius:50%;background:var(--purple);color:white;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(108,71,255,.4);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
 .support-fab:hover{transform:scale(1.08);}
@@ -440,7 +445,13 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
       <div class="ctx-tag">📊 <strong id="ctx-profile">—</strong></div>
     </div>
 
+    <!-- CLEAR CHAT -->
+    <div class="clear-chat-bar">
+      <button class="btn-clear-chat" onclick="clearChat()" title="Borrar historial de esta conversación">🗑️ Borrar chat</button>
+    </div>
+
     <div class="chat-messages" id="chat-messages"></div>
+    </div><!-- end profile-section-inner -->
     </div><!-- end tab-chat -->
 
     <!-- GOAL TAB -->
@@ -889,6 +900,14 @@ async function fetchInitial(){
 function showChatInput(){document.getElementById('chat-input-area').style.display='block';}
 function hideChatInput(){document.getElementById('chat-input-area').style.display='none';}
 
+// ===== CLEAR CHAT =====
+async function clearChat(){
+  if(!confirm('¿Borrar todo el historial de esta conversación? No se puede deshacer.'))return;
+  try{await fetch('/api/clear-chat',{method:'POST'});}catch(e){console.warn('clear-chat error:',e);}
+  document.getElementById('chat-messages').innerHTML='';
+  addAI(`¡Listo${userData?', '+userData.name:''}! Arrancamos de cero. ¿En qué te puedo ayudar?`);
+}
+
 // ===== FILE =====
 function handleFile(input){if(!input.files||!input.files[0])return;pendingFile=input.files[0];document.getElementById('file-preview-area').innerHTML=`<div class="file-preview-wrap">📎 ${pendingFile.name} <button onclick="removeFile()">×</button></div>`;}
 function removeFile(){pendingFile=null;document.getElementById('file-preview-area').innerHTML='';document.getElementById('file-input').value='';}
@@ -959,7 +978,7 @@ async function doChat(msg){
     };
     const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});
     const data=await res.json();removeTyping();document.getElementById('chat-send-btn').disabled=false;
-    if(!data.ok){addAI('Error al conectar. Intentá de nuevo.');return;}
+    if(!data.ok){addAI('Error al conectar. Intentá de nuevo.');console.error('doChat server error:',data.error,data.errorType);return;}
     addAI(data.text);
     if(data.objetivoUpdate){
       if(data.objetivoUpdate.monto)uObjMonto=data.objetivoUpdate.monto;
@@ -1032,7 +1051,7 @@ function restart(){
   document.getElementById('step-result').classList.remove('active');document.getElementById('step-welcome').classList.add('active');
   document.getElementById('chat-messages').innerHTML='';document.getElementById('demo-limit-box').style.display='none';
   document.getElementById('profile-section').style.display='block';document.getElementById('context-bar').style.display='none';
-  document.getElementById('restart-bar').style.display='block';document.getElementById('goal-dashboard').style.display='none';
+  document.getElementById('restart-bar').style.display='block';document.getElementById('tab-bar').style.display='none';
   document.getElementById('fin-panel').style.display='none';hideChatInput();loadUser();
 }
 
