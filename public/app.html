@@ -236,11 +236,6 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 .btn-restart{background:var(--card);border:1.5px solid var(--border);color:var(--text2);padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
 .btn-restart:hover{border-color:var(--purple);color:var(--purple);}
 
-/* CLEAR CHAT */
-.clear-chat-bar{display:flex;justify-content:flex-end;margin-bottom:.5rem;}
-.btn-clear-chat{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
-.btn-clear-chat:hover{border-color:#EF4444;color:#EF4444;}
-
 /* SUPPORT */
 .support-fab{position:fixed;bottom:90px;right:24px;z-index:999;width:48px;height:48px;border-radius:50%;background:var(--purple);color:white;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(108,71,255,.4);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
 .support-fab:hover{transform:scale(1.08);}
@@ -369,6 +364,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         <div class="cfg-item" onclick="openUpgradeModal()"><span class="cfg-icon">⚡</span> Mejorar plan</div>
         <div class="cfg-item" onclick="openBillingModal()"><span class="cfg-icon">💳</span> Plan y facturación</div>
         <div class="cfg-item" onclick="closeConfigAndRestart()"><span class="cfg-icon">↺</span> Hacer el test de nuevo</div>
+        <div class="cfg-item" onclick="closeConfigAndClearChat()"><span class="cfg-icon">🗑️</span> Borrar historial del chat</div>
         <div class="cfg-sep"></div>
         <div class="cfg-item danger" onclick="window.location.href='/logout'"><span class="cfg-icon">🚪</span> Cerrar sesión</div>
       </div>
@@ -443,11 +439,6 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
       <div class="ctx-tag">💰 Capital: <strong id="ctx-capital">—</strong></div>
       <div class="ctx-tag">🎯 Objetivo: <strong id="ctx-objetivo">—</strong></div>
       <div class="ctx-tag">📊 <strong id="ctx-profile">—</strong></div>
-    </div>
-
-    <!-- CLEAR CHAT -->
-    <div class="clear-chat-bar">
-      <button class="btn-clear-chat" onclick="clearChat()" title="Borrar historial de esta conversación">🗑️ Borrar chat</button>
     </div>
 
     <div class="chat-messages" id="chat-messages"></div>
@@ -601,6 +592,7 @@ const PIE_COLORS=['#6C47FF','#00C48C','#F97316','#3B82F6','#EC4899'];
 // ===== CONFIG =====
 function toggleConfig(){document.getElementById('config-dropdown').classList.toggle('open');}
 function closeConfigAndRestart(){document.getElementById('config-dropdown').classList.remove('open');restart();}
+function closeConfigAndClearChat(){document.getElementById('config-dropdown').classList.remove('open');clearChat();}
 
 // TABS
 function switchTab(tab){
@@ -703,7 +695,17 @@ async function activatePlan(plan){
     if(chatState==='initial')chatState='chatting';
     // If no profile yet, prompt for capital
     if(!rProfile){rProfile={key:'moderado',label:'⚖️ Moderado',desc:''};rScores=[33,34,33];}
-    if(!uCapital){addAI('¡Bienvenido al plan '+(plan==='advanced'?'Advanced':'Pro')+'! ¿Con cuánto capital mensual contás para invertir?');chatState='await_capital';}
+    const planName=plan==='advanced'?'Advanced':'Pro';
+    if(!uCapital){
+      if(chatState==='await_capital'){
+        // Ya se le había preguntado el capital mensual antes de tocar el límite de demo.
+        // No repetir la pregunta: dejar que responda directo a la que ya está en pantalla.
+        addAI(`¡Bienvenido al plan ${planName}! Segui donde quedaste ↑`);
+      } else {
+        addAI(`¡Bienvenido al plan ${planName}! ¿Con cuánto capital mensual contás para invertir?`);
+        chatState='await_capital';
+      }
+    }
   }
 }
 
