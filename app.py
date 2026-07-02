@@ -81,14 +81,27 @@ def init_db():
 
 init_db()
 
-def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=1000):
-    resp = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},
-        json={'model':model,'max_tokens':max_tokens,'system':system,'messages':messages},
-        timeout=55
-    )
-    return resp.json()
+def call_claude(messages, system, model='claude-haiku-4-5-20251001', max_tokens=1000, retries=1):
+    """Llama a la API de Anthropic. Si la respuesta trae un error transitorio
+    (overloaded_error / rate_limit_error) reintenta una vez antes de rendirse.
+    Siempre loguea el detalle del error para poder diagnosticarlo en los logs de Render."""
+    result = {}
+    for attempt in range(retries + 1):
+        resp = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},
+            json={'model':model,'max_tokens':max_tokens,'system':system,'messages':messages},
+            timeout=55
+        )
+        result = resp.json()
+        if 'error' not in result:
+            return result
+        err = result.get('error', {})
+        print(f'[Claude API error] attempt={attempt+1} type={err.get("type")} msg={err.get("message")}')
+        if err.get('type') in ('overloaded_error','rate_limit_error') and attempt < retries:
+            continue
+        break
+    return result
 
 def save_msg(uid, role, content):
     conn = get_db()
@@ -235,6 +248,10 @@ def recommend():
         f"- 3 instrumentos numerados con nombre y por que encaja con su perfil\nMaximo 160 palabras. Sin preguntas al final.")
     try:
         result = call_claude([{'role':'user','content':prompt}],'',model='claude-haiku-4-5-20251001',max_tokens=600)
+        if 'error' in result:
+            err = result.get('error', {})
+            conn.close()
+            return jsonify({'ok':False,'error':err.get('message','Error de conexión con la IA.'),'errorType':err.get('type')})
         text = result.get('content',[{}])[0].get('text','').strip()
         if user['plan'] not in ('paid','advanced'):
             conn.execute('UPDATE users SET demo_used=demo_used+1 WHERE id=?',(session['user_id'],))
@@ -334,7 +351,10 @@ def chat():
 
     try:
         result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=3000)
-        if 'error' in result: conn.close(); return jsonify({'ok':False,'error':str(result['error'])})
+        if 'error' in result:
+            err = result.get('error', {})
+            conn.close()
+            return jsonify({'ok':False,'error':err.get('message','Error de conexión con la IA.'),'errorType':err.get('type')})
         full = result.get('content',[{}])[0].get('text','').strip()
         parts = full.split('---CHART---')
         text = parts[0].strip()
@@ -376,6 +396,14 @@ def chat():
         return jsonify({'ok':True,'text':text,'instruments':instruments,'objetivoUpdate':obj_update,'financialUpdate':fin_update})
     except Exception as e:
         print('Chat error:',e); conn.close(); return jsonify({'ok':False,'error':str(e)})
+
+@app.route('/api/clear-chat', methods=['POST'])
+def clear_chat():
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    conn.execute('DELETE FROM chat_messages WHERE user_id=?',(session['user_id'],))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True})
 
 @app.route('/api/returning-greeting', methods=['POST'])
 def returning_greeting():
