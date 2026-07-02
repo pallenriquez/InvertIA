@@ -376,7 +376,8 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 <div id="tab-bar" style="display:none;position:sticky;top:57px;z-index:150;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 1.5rem;">
   <div style="max-width:720px;margin:0 auto;display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
     <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
-    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
+    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
+    <button id="tab-fin-btn" onclick="switchTab('fin')" style="flex:1;display:none;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💰 Finanzas</button>
   </div>
 </div>
 
@@ -425,15 +426,6 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     <div id="tab-chat">
     <div id="profile-section-inner">
 
-    <!-- FIN PANEL -->
-    <div id="fin-panel" class="fin-panel" style="display:none;">
-      <div class="fin-panel-header">
-        <div class="fin-panel-title">💼 Control financiero <span class="fin-badge">Advanced</span></div>
-        <button onclick="document.getElementById('fin-panel').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;">×</button>
-      </div>
-      <div id="fin-content"><div class="fin-empty">Contale a tu asesor tus ingresos y gastos para activar este panel.</div></div>
-    </div>
-
     <!-- CONTEXT BAR -->
     <div id="context-bar" class="context-bar" style="display:none;">
       <div class="ctx-tag">💰 Capital: <strong id="ctx-capital">—</strong></div>
@@ -451,9 +443,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 
         <!-- Big emoji -->
         <div id="goal-emoji-big" style="font-size:64px;margin-bottom:.75rem;line-height:1;">🎯</div>
-        <h2 id="goal-name" style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:.25rem;">Mi objetivo</h2>
-        <div id="goal-time-badge" style="display:inline-block;font-size:12px;background:var(--purple-light);color:var(--purple);padding:4px 14px;border-radius:999px;font-weight:600;margin-bottom:.6rem;">—</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:1.15rem;">Así llegarías si mantenés este plan durante todo el plazo</div>
+        <h2 id="goal-name" style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:1.5rem;">Mi objetivo</h2>
 
         <!-- Progress ring area -->
         <div style="position:relative;width:140px;height:140px;margin:0 auto 1.5rem;">
@@ -465,16 +455,15 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <div id="goal-pct-big" style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--text);line-height:1;">—</div>
-            <div style="font-size:11px;color:var(--text2);">proyectado al final</div>
+            <div style="font-size:11px;color:var(--text2);">de tu meta</div>
           </div>
         </div>
 
-        <!-- Amounts -->
+        <!-- Ahorrado / Meta -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
-            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Proyección al final del plazo</div>
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Llevás ahorrado</div>
             <div id="goal-current-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--purple);">—</div>
-            <div id="goal-retorno-note" style="font-size:10px;color:var(--text2);margin-top:3px;"></div>
           </div>
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
             <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta</div>
@@ -484,27 +473,54 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 
         <!-- Falta -->
         <div id="goal-remaining-wrap" style="background:rgba(0,196,140,.08);border:1px solid rgba(0,196,140,.2);border-radius:12px;padding:.875rem;margin-bottom:1.25rem;display:none;">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">Para llegar a tu meta te falta acumular</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">Te faltan</div>
           <div id="goal-remaining-label" style="font-size:20px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;">—</div>
         </div>
 
-        <!-- Extra cards -->
-        <div id="goal-extra-info" style="display:none;border-top:1px solid var(--border);padding-top:1.25rem;margin-top:.25rem;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
-              <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Inversión mensual</div>
-              <div id="goal-cap-mensual" style="font-size:18px;font-weight:700;color:var(--purple);font-family:'Space Grotesk',sans-serif;">—</div>
-            </div>
-            <div style="background:var(--bg3);border-radius:12px;padding:1rem;">
-              <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Plazo estimado</div>
-              <div id="goal-plazo" style="font-size:18px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif;">—</div>
-            </div>
-          </div>
-        </div>
+        <!-- Nota secundaria: a este ritmo, cuando llegarías -->
+        <div id="goal-eta-note" style="display:none;font-size:12.5px;color:var(--text2);background:var(--bg3);border-radius:12px;padding:.85rem 1rem;line-height:1.55;text-align:left;"></div>
 
         <!-- Pending state -->
         <div id="goal-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
-          Contale a tu asesor cuánto querés invertir por mes y tu objetivo para ver el progreso aquí. 💬
+          Contale a tu asesor tu objetivo, cuánto llevás ahorrado y cuánto querés invertir por mes para ver el progreso acá. 💬
+        </div>
+      </div>
+    </div>
+
+    <!-- FIN TAB (solo plan Advanced) -->
+    <div id="tab-fin" style="display:none;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;">
+        <h2 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:1.25rem;">💰 Tus finanzas</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ingresos</div>
+            <div id="fin-ingresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--green);">—</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Egresos</div>
+            <div id="fin-egresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#EF4444;">—</div>
+          </div>
+        </div>
+
+        <div style="background:var(--purple-light);border-radius:14px;padding:1rem;margin-bottom:1.5rem;text-align:center;">
+          <div style="font-size:11px;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Balance mensual</div>
+          <div id="fin-balance-val" style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--purple-dark);">—</div>
+        </div>
+
+        <div id="fin-fijos-section" style="margin-bottom:1.5rem;display:none;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">📌 Gastos fijos</div>
+          <div id="fin-fijos-list"></div>
+        </div>
+
+        <div id="fin-hormiga-section" style="margin-bottom:.5rem;display:none;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">🐜 Gastos hormiga</div>
+          <div id="fin-hormiga-list"></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:.6rem;line-height:1.5;">Gastos chicos y recurrentes que suelen pasar desapercibidos, pero suman.</div>
+        </div>
+
+        <div id="fin-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
+          Contale a tu asesor tus ingresos y gastos para activar tu panel financiero. 💬
         </div>
       </div>
     </div>
@@ -587,7 +603,7 @@ function toggleTheme(){const d=document.documentElement;const dk=d.getAttribute(
 const Qs=[{text:"¿Cuál es tu objetivo principal al invertir?",opts:[{t:"Proteger mi capital, aunque gane poco",s:[3,1,0]},{t:"Crecer moderadamente con cierto riesgo controlado",s:[1,3,1]},{t:"Maximizar ganancias, aunque implique mayor riesgo",s:[0,1,3]}]},{text:"¿En cuánto tiempo necesitás el dinero que invertís?",opts:[{t:"Menos de 1 año",s:[3,0,0]},{t:"Entre 1 y 5 años",s:[1,3,1]},{t:"Más de 5 años",s:[0,1,3]}]},{text:"Si tu inversión cae un 20% en un mes, ¿qué hacés?",opts:[{t:"Vendo todo para no perder más",s:[3,0,0]},{t:"Me preocupo pero espero que se recupere",s:[1,3,0]},{t:"Compro más, es una oportunidad",s:[0,1,3]}]},{text:"¿Qué porcentaje de tus ahorros estás dispuesto a arriesgar?",opts:[{t:"Menos del 10%",s:[3,1,0]},{t:"Entre el 10% y 30%",s:[0,3,1]},{t:"Más del 30%",s:[0,1,3]}]},{text:"¿Cuánta experiencia tenés invirtiendo?",opts:[{t:"Ninguna o muy poca",s:[3,1,0]},{t:"Algo de experiencia con fondos o acciones",s:[1,3,1]},{t:"Experiencia con cripto, opciones o derivados",s:[0,1,3]}]},{text:"¿Cómo es tu situación económica actual?",opts:[{t:"Ajustada, necesito ese dinero por si acaso",s:[3,1,0]},{t:"Estable, tengo un fondo de emergencia separado",s:[1,3,1]},{t:"Holgada, puedo perder este dinero sin problema",s:[0,1,3]}]},{text:"¿Cómo preferís que sea tu cartera?",opts:[{t:"Plazos fijos, bonos y activos muy seguros",s:[3,0,0]},{t:"Mix entre renta fija y acciones diversificadas",s:[0,3,0]},{t:"Acciones, cripto y activos de alto potencial",s:[0,0,3]}]}];
 let cur=0,ans=new Array(Qs.length).fill(null);
 let userData=null,rProfile=null,rScores=null;
-let uCapital='',uObjetivo='',uObjMonto=null,uObjPlazo=null,uCapMensual=null,uObjRetorno=null;
+let uCapital='',uObjetivo='',uObjMonto=null,uObjPlazo=null,uCapMensual=null,uObjRetorno=null,uObjAhorrado=null;
 let chatState='initial',pendingFile=null;
 const PIE_COLORS=['#6C47FF','#00C48C','#F97316','#3B82F6','#EC4899'];
 
@@ -599,18 +615,18 @@ function closeConfigAndClearChat(){document.getElementById('config-dropdown').cl
 // TABS
 function switchTab(tab){
   const isChat = tab==='chat';
-  document.getElementById('tab-chat').style.display = isChat?'block':'none';
-  document.getElementById('tab-goal').style.display = isChat?'none':'block';
+  ['chat','goal','fin'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display = (t===tab)?'block':'none';
+    const btn=document.getElementById('tab-'+t+'-btn');
+    if(!btn)return;
+    const active = t===tab;
+    btn.style.background = active?'var(--card)':'transparent';
+    btn.style.color = active?'var(--text)':'var(--text2)';
+    btn.style.boxShadow = active?'0 1px 4px var(--shadow)':'none';
+  });
   const ps = document.getElementById('profile-section');
   if(ps) ps.style.display = isChat?'block':'none';
-  const chatBtn = document.getElementById('tab-chat-btn');
-  const goalBtn = document.getElementById('tab-goal-btn');
-  chatBtn.style.background = isChat?'var(--card)':'transparent';
-  chatBtn.style.color = isChat?'var(--text)':'var(--text2)';
-  chatBtn.style.boxShadow = isChat?'0 1px 4px var(--shadow)':'none';
-  goalBtn.style.background = isChat?'transparent':'var(--card)';
-  goalBtn.style.color = isChat?'var(--text2)':'var(--text)';
-  goalBtn.style.boxShadow = isChat?'none':'0 1px 4px var(--shadow)';
   if(!isChat){
     document.getElementById('chat-input-area').style.display='none';
     window.scrollTo({top:0,behavior:'smooth'});
@@ -623,18 +639,26 @@ function switchTab(tab){
 }
 
 // GOAL TOAST
-let goalToastShown = false;
+let goalToastShown = false, finToastShown = false;
+function showAppToast(title,msg){
+  document.getElementById('goal-toast-title').textContent = title;
+  document.getElementById('goal-toast-msg').textContent = msg;
+  const toast = document.getElementById('goal-toast');
+  toast.style.pointerEvents = 'all';
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+}
 function showGoalToast(){
   if(goalToastShown)return;
   goalToastShown = true;
   const objetivo = uObjetivo||'tu objetivo';
   const monto = uObjMonto?`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`:'';
-  document.getElementById('goal-toast-title').textContent = `¡Tu objetivo está activado!`;
-  document.getElementById('goal-toast-msg').textContent = `A partir de ahora podés ver cuánto te falta para ${objetivo}${monto?' ('+monto+')':''} desde la pestaña Objetivo.`;
-  const toast = document.getElementById('goal-toast');
-  toast.style.pointerEvents = 'all';
-  toast.style.opacity = '1';
-  toast.style.transform = 'translateX(-50%) translateY(0)';
+  showAppToast('¡Tu objetivo está activado!',`A partir de ahora podés ver cuánto te falta para ${objetivo}${monto?' ('+monto+')':''} desde la pestaña Objetivo.`);
+}
+function showFinToast(){
+  if(finToastShown)return;
+  finToastShown = true;
+  showAppToast('Tu panel financiero está listo','Mirá el detalle de tus ingresos, gastos fijos y gastos hormiga en la pestaña Finanzas.');
 }
 function acceptGoalToast(){
   const toast = document.getElementById('goal-toast');
@@ -737,7 +761,7 @@ async function loadUser(){
     rProfile={key:sp.profileKey,label:sp.profileLabel,desc:''};
     rScores=sp.scores||[33,34,33];
     uCapital=sp.capital||'';uObjetivo=sp.objetivo||'';
-    uObjMonto=sp.objetivoMonto;uObjPlazo=sp.objetivoPlazoMeses;uCapMensual=sp.capitalMensual;uObjRetorno=sp.objetivoRetornoAnual;
+    uObjMonto=sp.objetivoMonto;uObjPlazo=sp.objetivoPlazoMeses;uCapMensual=sp.capitalMensual;uObjRetorno=sp.objetivoRetornoAnual;uObjAhorrado=sp.objetivoAhorradoActual;
     if(data.financialData&&userData.plan==='advanced')updateFinPanel(data.financialData);
     showReturningUser(data.daysSinceLastVisit);
     return;
@@ -758,13 +782,12 @@ function showReturningUser(days){
   document.getElementById('ctx-objetivo').textContent=uObjetivo||'—';
   document.getElementById('ctx-profile').textContent=rProfile?rProfile.label:'—';
   document.getElementById('context-bar').style.display='flex';
-  if(uObjMonto&&uCapMensual)updateGoalDashboard();
   chatState='chatting';showChatInput();
-  if(uObjMonto&&uCapMensual){
-    document.getElementById('tab-bar').style.display='block';
-    goalToastShown=true; // don't show toast for returning users
+  if(uObjMonto){
+    goalToastShown=true; // no molestar con el toast a usuarios que ya vienen usando la app
     updateGoalDashboard();
   }
+  if(userData.plan==='advanced') finToastShown=true; // idem para el toast de finanzas
   fetch('/api/returning-greeting',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
     .then(r=>r.json()).then(d=>{if(d.ok)addAI(d.text);else addAI(`¡Hola de nuevo, ${userData.name}! ¿En qué te puedo ayudar hoy?`);});
 }
@@ -800,29 +823,20 @@ function updateGoalDashboard(){
   const emoji=getGoalEmoji(objetivoLabel);
 
   document.getElementById('tab-bar').style.display='block';
+  document.getElementById('tab-goal-btn').style.display='flex';
   document.getElementById('goal-emoji-big').textContent=emoji;
   document.getElementById('goal-name').textContent=objetivoLabel;
   document.getElementById('goal-target-val').textContent=`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
   document.getElementById('goal-pending').style.display='none';
 
-  if(uObjPlazo){
-    document.getElementById('goal-time-badge').textContent=formatDuration(uObjPlazo)+' estimado';
-  }
+  if(uObjAhorrado!=null){
+    // Progreso REAL: cuanto tiene ahorrado hoy (segun el mismo usuario) vs la meta. Simple e intuitivo:
+    // nada de proyecciones futuras mezcladas aca, eso queda aparte en la nota secundaria.
+    const ahorrado=uObjAhorrado;
+    const pct=Math.min(Math.round((ahorrado/uObjMonto)*100),100);
+    const falta=Math.max(0,uObjMonto-ahorrado);
 
-  if(uCapMensual&&uObjPlazo){
-    // Proyeccion con interes compuesto (aporte mensual constante), usando el rendimiento anual
-    // que el asesor asumio para calcular el plazo/monto. Sin esto, comparar "proyeccion" vs "meta"
-    // no tiene sentido: la meta ya asume que el dinero esta invertido y crece, no guardado sin rendimiento.
-    const retornoAnual = uObjRetorno || 7; // 7% anual como piso conservador si el asesor no lo informo
-    const tasaMensual = (retornoAnual/100)/12;
-    const acum = tasaMensual>0
-      ? uCapMensual * ((Math.pow(1+tasaMensual, uObjPlazo)-1) / tasaMensual)
-      : uCapMensual*uObjPlazo;
-    const pct=Math.min(Math.round((acum/uObjMonto)*100),100);
-    const falta=Math.max(0,uObjMonto-acum);
-
-    document.getElementById('goal-current-val').textContent=`USD ${acum.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-    document.getElementById('goal-retorno-note').textContent=`con ~${retornoAnual}% anual estimado de rendimiento`;
+    document.getElementById('goal-current-val').textContent=`USD ${ahorrado.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
     document.getElementById('goal-pct-big').textContent=pct+'%';
 
     // Animate ring: circumference = 2*PI*58 ≈ 364
@@ -831,15 +845,20 @@ function updateGoalDashboard(){
 
     document.getElementById('goal-remaining-label').textContent=`USD ${falta.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
     document.getElementById('goal-remaining-wrap').style.display='block';
-
-    document.getElementById('goal-extra-info').style.display='block';
-    document.getElementById('goal-cap-mensual').textContent=`USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes`;
-    document.getElementById('goal-plazo').textContent=formatDuration(uObjPlazo);
   } else {
     document.getElementById('goal-current-val').textContent='—';
-    document.getElementById('goal-retorno-note').textContent='';
     document.getElementById('goal-pct-big').textContent='—';
-    document.getElementById('goal-pending').style.display='block';
+    document.getElementById('goal-remaining-wrap').style.display='none';
+  }
+
+  // Nota secundaria (opcional): a este ritmo de inversion, cuanto tardarias en llegar
+  const etaNote=document.getElementById('goal-eta-note');
+  if(uCapMensual&&uObjPlazo){
+    const retornoAnual=uObjRetorno||7;
+    etaNote.style.display='block';
+    etaNote.textContent=`💡 A este ritmo (USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes, ~${retornoAnual}% anual estimado de rendimiento), llegarías a tu meta en ${formatDuration(uObjPlazo)}.`;
+  } else {
+    etaNote.style.display='none';
   }
 
   setTimeout(showGoalToast, 600);
@@ -850,6 +869,7 @@ function updateGoalBasic(){
   if(!uObjetivo) return;
   const emoji = getGoalEmoji(uObjetivo);
   document.getElementById('tab-bar').style.display='block';
+  document.getElementById('tab-goal-btn').style.display='flex';
   document.getElementById('goal-emoji-big').textContent=emoji;
   document.getElementById('goal-name').textContent=uObjetivo;
   document.getElementById('goal-pending').style.display='block';
@@ -857,15 +877,29 @@ function updateGoalBasic(){
   document.getElementById('tab-goal-btn').textContent=emoji+' Mi objetivo';
 }
 
-// ===== FIN PANEL =====
+// ===== FIN DASHBOARD (pestaña Finanzas, solo plan Advanced) =====
 function updateFinPanel(fin){
-  if(!fin||(!fin.ingresos&&!fin.egresos))return;
-  document.getElementById('fin-panel').style.display='block';
-  const bal=(fin.ingresos||0)-(fin.egresos||0);
-  const cats=fin.categorias||{};
-  const maxC=fin.egresos||1;
-  let cH='';Object.entries(cats).forEach(([k,v])=>{const p=Math.round((v/maxC)*100);cH+=`<div class="fin-cat-item"><div><div>${k}</div><div style="height:4px;background:var(--purple);border-radius:2px;width:${p}%;margin-top:3px;"></div></div><div style="font-weight:600;">$${v.toLocaleString('es-AR')}</div></div>`;});
-  document.getElementById('fin-content').innerHTML=`<div class="fin-grid"><div class="fin-card"><div class="fin-card-label">Ingresos</div><div class="fin-card-value income">$${(fin.ingresos||0).toLocaleString('es-AR')}</div></div><div class="fin-card"><div class="fin-card-label">Egresos</div><div class="fin-card-value expense">$${(fin.egresos||0).toLocaleString('es-AR')}</div></div><div class="fin-card" style="grid-column:1/-1;"><div class="fin-card-label">Balance</div><div class="fin-card-value balance">$${bal.toLocaleString('es-AR')}</div></div></div>${cH?`<div>${cH}</div>`:''}`;
+  if(!fin||(fin.ingresos==null&&fin.egresos==null))return;
+  document.getElementById('tab-bar').style.display='block';
+  document.getElementById('tab-fin-btn').style.display='flex';
+  document.getElementById('fin-pending').style.display='none';
+
+  const ingresos=fin.ingresos||0, egresos=fin.egresos||0, bal=ingresos-egresos;
+  document.getElementById('fin-ingresos-val').textContent=`$${ingresos.toLocaleString('es-AR')}`;
+  document.getElementById('fin-egresos-val').textContent=`$${egresos.toLocaleString('es-AR')}`;
+  document.getElementById('fin-balance-val').textContent=`$${bal.toLocaleString('es-AR')}`;
+
+  const fijos=fin.categorias||{};
+  const fijosKeys=Object.keys(fijos);
+  document.getElementById('fin-fijos-section').style.display=fijosKeys.length?'block':'none';
+  document.getElementById('fin-fijos-list').innerHTML=fijosKeys.map(k=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(fijos[k]||0).toLocaleString('es-AR')}</span></div>`).join('');
+
+  const hormiga=fin.gastosHormiga||{};
+  const hormigaKeys=Object.keys(hormiga);
+  document.getElementById('fin-hormiga-section').style.display=hormigaKeys.length?'block':'none';
+  document.getElementById('fin-hormiga-list').innerHTML=hormigaKeys.map(k=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(hormiga[k]||0).toLocaleString('es-AR')}</span></div>`).join('');
+
+  setTimeout(showFinToast, 600);
 }
 
 // ===== QUIZ =====
@@ -927,15 +961,38 @@ async function clearChat(){
 }
 
 // ===== FILE =====
-function handleFile(input){if(!input.files||!input.files[0])return;pendingFile=input.files[0];document.getElementById('file-preview-area').innerHTML=`<div class="file-preview-wrap">📎 ${pendingFile.name} <button onclick="removeFile()">×</button></div>`;}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result.split(',')[1]); // saca el prefijo "data:mime;base64,"
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+function handleFile(input){
+  if(!input.files||!input.files[0])return;
+  const f=input.files[0];
+  if(f.size>5*1024*1024){alert('El archivo es muy grande (máx. 5MB).');input.value='';return;}
+  pendingFile=f;
+  document.getElementById('file-preview-area').innerHTML=`<div class="file-preview-wrap">📎 ${pendingFile.name} <button onclick="removeFile()">×</button></div>`;
+}
 function removeFile(){pendingFile=null;document.getElementById('file-preview-area').innerHTML='';document.getElementById('file-input').value='';}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result.split(',')[1]); // saca el prefijo "data:mime;base64,"
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ===== CHAT =====
 async function sendChat(){
   const inp=document.getElementById('chat-input');const txt=inp.value.trim();
   if(!txt&&!pendingFile)return;
   inp.value='';inp.style.height='auto';document.getElementById('chat-send-btn').disabled=true;
-  addUser(pendingFile?txt+` [📎 ${pendingFile.name}]`:txt);
+  const attachedFile=pendingFile;
+  addUser(attachedFile?(txt||'(archivo adjunto)')+` [📎 ${attachedFile.name}]`:txt);
   if(pendingFile)removeFile();
 
   if(chatState==='await_capital'){
@@ -973,17 +1030,22 @@ async function sendChat(){
     updateGoalBasic(); // Show goal tab immediately
     showTyping();
     const msgCapObj = `Mi capital mensual es ${(uCapital||'').replace(/`/g,"'")} y mi objetivo es ${(uObjetivo||'').replace(/`/g,"'")}.`;
-    await doChat(msgCapObj);
+    await doChat(msgCapObj,attachedFile);
     return;
   }
-  showTyping();await doChat(txt);
+  showTyping();await doChat(txt,attachedFile);
 }
 
-async function doChat(msg){
+async function doChat(msg,file){
   try{
     // Strip emojis from profile label (causes Safari fetch issues)
     const stripEmoji = s => (String(s||'')).replace(/[^\u0000-\u007E\u00A0-\u024F\u1E00-\u1EFF ]/g,'').trim();
     const safeStr = s => (String(s||'')).replace(/[\u0000-\u001F]/g,'').trim();
+    let imagePayload=null;
+    if(file){
+      try{ imagePayload={data:await fileToBase64(file),mediaType:file.type||'application/octet-stream'}; }
+      catch(e){ console.warn('No se pudo leer el archivo adjunto:',e); }
+    }
     const chatBody = {
       profile: stripEmoji(rProfile ? rProfile.label : 'Moderado'),
       scores: Array.isArray(rScores) && rScores.length===3 ? rScores : [33,34,33],
@@ -992,7 +1054,8 @@ async function doChat(msg){
       message: safeStr(msg),
       objetivoMonto: uObjMonto ? Number(uObjMonto) : null,
       objetivoPlazoMeses: uObjPlazo ? Number(uObjPlazo) : null,
-      capitalMensual: uCapMensual ? Number(uCapMensual) : null
+      capitalMensual: uCapMensual ? Number(uCapMensual) : null,
+      image: imagePayload
     };
     const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});
     const data=await res.json();removeTyping();document.getElementById('chat-send-btn').disabled=false;
@@ -1003,6 +1066,7 @@ async function doChat(msg){
       if(data.objetivoUpdate.plazoMeses)uObjPlazo=data.objetivoUpdate.plazoMeses;
       if(data.objetivoUpdate.capitalMensual)uCapMensual=data.objetivoUpdate.capitalMensual;
       if(data.objetivoUpdate.retornoAnualEstimado)uObjRetorno=data.objetivoUpdate.retornoAnualEstimado;
+      if(data.objetivoUpdate.ahorradoActual!=null)uObjAhorrado=data.objetivoUpdate.ahorradoActual;
       updateGoalDashboard();
     }
     if(data.financialUpdate&&userData.plan==='advanced')updateFinPanel(data.financialUpdate);
@@ -1067,12 +1131,14 @@ function renderProj(inst){
 async function restart(){
   try{await fetch('/api/reset-profile',{method:'POST'});}catch(e){console.warn('reset-profile error:',e);}
   cur=0;ans=new Array(Qs.length).fill(null);
-  rProfile=null;rScores=null;uCapital='';uObjetivo='';uObjMonto=null;uObjPlazo=null;uCapMensual=null;uObjRetorno=null;chatState='initial';
+  rProfile=null;rScores=null;uCapital='';uObjetivo='';uObjMonto=null;uObjPlazo=null;uCapMensual=null;uObjRetorno=null;uObjAhorrado=null;chatState='initial';
+  goalToastShown=false;finToastShown=false;
   document.getElementById('step-result').classList.remove('active');document.getElementById('step-welcome').classList.add('active');
   document.getElementById('chat-messages').innerHTML='';document.getElementById('demo-limit-box').style.display='none';
   document.getElementById('profile-section').style.display='block';document.getElementById('context-bar').style.display='none';
   document.getElementById('restart-bar').style.display='block';document.getElementById('tab-bar').style.display='none';
-  document.getElementById('fin-panel').style.display='none';hideChatInput();loadUser();
+  document.getElementById('tab-goal-btn').style.display='none';document.getElementById('tab-fin-btn').style.display='none';
+  hideChatInput();loadUser();
 }
 
 // ===== SUPPORT =====
