@@ -515,32 +515,36 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         </div>
         <div id="fin-savings-compare" style="font-size:12px;margin:-1.25rem 0 1.5rem;text-align:center;"></div>
 
-        <!-- Donut de categorias -->
-        <div id="fin-chart-section" style="margin-bottom:1.75rem;display:none;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.85rem;">📊 En qué se va tu plata</div>
-          <div class="pie-inner">
-            <div class="pie-box"><canvas id="fin-donut"></canvas></div>
-            <div class="pie-legend" id="fin-donut-legend"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.75rem;align-items:start;">
+          <!-- Donut de categorias -->
+          <div id="fin-chart-section" style="display:none;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.85rem;">📊 En qué se va tu plata</div>
+            <div class="pie-inner">
+              <div class="pie-box"><canvas id="fin-donut"></canvas></div>
+              <div class="pie-legend" id="fin-donut-legend"></div>
+            </div>
           </div>
-        </div>
 
-        <!-- Gastos fijos agrupados por subcategoria -->
-        <div id="fin-fijos-section" style="margin-bottom:1.75rem;display:none;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">📌 Gastos fijos</div>
-          <div id="fin-fijos-list"></div>
-        </div>
+          <div>
+            <!-- Gastos fijos agrupados por subcategoria -->
+            <div id="fin-fijos-section" style="margin-bottom:1.75rem;display:none;">
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">📌 Gastos fijos</div>
+              <div id="fin-fijos-list"></div>
+            </div>
 
-        <!-- Total destacado de gastos hormiga -->
-        <div id="fin-hormiga-total-wrap" style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);border-radius:14px;padding:1rem;margin-bottom:1rem;display:none;">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">🐜 Total en gastos hormiga este mes</div>
-          <div id="fin-hormiga-total-val" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#EA580C;">—</div>
-          <div id="fin-hormiga-total-pct" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
-        </div>
+            <!-- Total destacado de gastos hormiga -->
+            <div id="fin-hormiga-total-wrap" style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);border-radius:14px;padding:1rem;margin-bottom:1rem;display:none;">
+              <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">🐜 Total en gastos hormiga este mes</div>
+              <div id="fin-hormiga-total-val" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#EA580C;">—</div>
+              <div id="fin-hormiga-total-pct" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+            </div>
 
-        <div id="fin-hormiga-section" style="margin-bottom:.5rem;display:none;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">🐜 Gastos hormiga, agrupados</div>
-          <div id="fin-hormiga-list"></div>
-          <div style="font-size:11px;color:var(--text2);margin-top:.6rem;line-height:1.5;">Gastos chicos y recurrentes que suelen pasar desapercibidos, pero suman.</div>
+            <div id="fin-hormiga-section" style="margin-bottom:.5rem;display:none;">
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">🐜 Gastos hormiga, agrupados</div>
+              <div id="fin-hormiga-list"></div>
+              <div style="font-size:11px;color:var(--text2);margin-top:.6rem;line-height:1.5;">Gastos chicos y recurrentes que suelen pasar desapercibidos, pero suman.</div>
+            </div>
+          </div>
         </div>
 
         <div id="fin-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
