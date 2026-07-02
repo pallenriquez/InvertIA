@@ -417,6 +417,26 @@ REGLAS del JSON:
 =====
 """
 
+_dolar_mep_cache = {'rate': None, 'fetched_at': 0}
+
+def get_dolar_mep():
+    """Devuelve la cotizacion del dolar MEP actual. Se cachea 1 hora para no pegarle a la API
+    en cada mensaje. Si la API falla, devuelve un fallback conservador en vez de romper el chat."""
+    now = datetime.now().timestamp()
+    if _dolar_mep_cache['rate'] and (now - _dolar_mep_cache['fetched_at']) < 3600:
+        return _dolar_mep_cache['rate']
+    try:
+        resp = requests.get('https://dolarapi.com/v1/dolares/bolsa', timeout=8)
+        data = resp.json()
+        rate = float(data.get('venta') or data.get('compra'))
+        if rate and rate > 0:
+            _dolar_mep_cache['rate'] = rate
+            _dolar_mep_cache['fetched_at'] = now
+            return rate
+    except Exception as e:
+        print('[dolar MEP fetch error]', e)
+    return _dolar_mep_cache['rate'] or 1500  # fallback si la API falla y no hay cache previo
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     if not session.get('user_id'): return jsonify({'ok':False,'error':'No autenticado.'})
@@ -431,12 +451,24 @@ def chat():
 
     capital_usd = capital
     tiene_pesos = capital and any(w in capital.lower() for w in ['peso','ars','pesos','argentino',' p '])
+    dolar_mep = None
+    if tiene_pesos:
+        dolar_mep = get_dolar_mep()
+        cleaned = re.sub(r'\.(?=\d{3})', '', capital)  # sacar puntos de miles (formato argentino: 1.000.000)
+        cleaned = cleaned.replace(',', '.')  # coma decimal -> punto
+        nums = re.findall(r'[\d.]+', cleaned)
+        try:
+            monto_ars = float(nums[0]) if nums else 0
+        except (ValueError, IndexError):
+            monto_ars = 0
+        if monto_ars > 0:
+            capital_usd = f"{capital} (= USD {monto_ars/dolar_mep:,.0f} al dolar MEP de hoy, ${dolar_mep:,.0f})"
 
     high_ticket = any(w in objetivo.lower() for w in ['casa','departamento','auto','viaje','retiro','jubilacion','inmueble']) if objetivo else False
     history = get_history(session['user_id'],limit=12)
 
     ctx = []
-    if capital_usd: ctx.append(f"Capital mensual disponible: {capital_usd}"+(" (esta en pesos argentinos; buscá vos la cotizacion del dolar MEP de hoy para convertirlo, no se lo preguntes al usuario)" if tiene_pesos else ""))
+    if capital_usd: ctx.append(f"Capital mensual disponible: {capital_usd}"+(" — YA esta convertido a USD arriba, usa ese numero en USD directamente, no hace falta que vos convertirlo ni buscar el dolar." if tiene_pesos else ""))
     if objetivo: ctx.append(f"Objetivo: {objetivo}")
     if obj_monto: ctx.append(f"Monto objetivo: USD {obj_monto:,.0f}")
     if obj_plazo: ctx.append(f"Plazo proyectado: {obj_plazo} meses")
@@ -475,11 +507,24 @@ def chat():
            "agregues cosas como 'Yoga: $0' o 'Chino mandarin: $0' si el usuario no las menciono). Si no tenes "
            "informacion de una subcategoria, simplemente no la incluyas en el JSON — mejor un panel incompleto que "
            "uno con datos falsos.\n"
-           "IDENTIFICAR GASTOS NO CLAROS: si un gasto tiene un nombre que no reconoces con certeza (nombre de banco, "
-           "empresa, comercio local, sigla como 'ABL', 'AySA', 'Edesur', etc), buscalo en la web primero para saber "
-           "que es exactamente (ej: buscar 'que es ABL Argentina') antes de asignarle categoria — muchos de estos son "
-           "impuestos o servicios especificos de Argentina que no deberias adivinar. Si despues de buscar seguis sin "
-           "poder identificarlo con confianza, preguntale al usuario que es ese gasto en vez de inventar una categoria.\n"
+           "ESTO TAMBIEN APLICA A INGRESOS Y EGRESOS TOTALES: nunca le sumes al ingreso o egreso declarado un monto "
+           "estimado o supuesto tuyo (ej: prohibido calcular 'egresos totales = lo que me dijiste + 470000 que "
+           "estimo de gastos facultativos'). ingresos y egresos son SIEMPRE el numero exacto que el usuario declaro, "
+           "nada mas. Si crees que falta informacion, preguntaselo (y parate ahi, ver regla de arriba), no lo "
+           "estimes vos y lo sumes silenciosamente.\n"
+           "IDENTIFICAR GASTOS NO CLAROS: si un gasto tiene un nombre que no reconoces con TOTAL certeza (nombre de "
+           "banco, empresa, comercio local, sigla como 'ABL', 'AySA', 'Edesur', 'ARCA', etc), buscalo en la web "
+           "primero para saber que es exactamente (ej: buscar 'que es ARCA Argentina') antes de asignarle categoria. "
+           "PROHIBIDO categorizar por parecido de sonido o adivinando: 'ARCA' NO es alimentacion solo porque suena "
+           "a 'arca de comida' — ARCA es el nuevo nombre de AFIP (Agencia de Recaudacion y Control Aduanero), un "
+           "organismo impositivo, no un comercio de alimentos. Muchos de estos son impuestos o servicios "
+           "especificos de Argentina que no deberias adivinar. Si despues de buscar seguis sin poder identificarlo "
+           "con confianza, preguntale al usuario que es ese gasto en vez de inventar una categoria.\n"
+           "NUNCA DUPLIQUES UN MONTO YA DECLARADO: si el usuario aclara que una PARTE de un monto que ya te dio "
+           "corresponde a algo especifico (ej: 'de los 1.000.000 de tarjeta, 470.000 son gastos facultativos'), eso "
+           "es informacion adicional sobre un monto que YA esta incluido en el total — no es plata nueva. NO agregues "
+           "un item nuevo con ese monto sumandolo aparte (eso duplica el gasto y rompe el total). En cambio, "
+           "reorganizá/etiquetá el desglose dentro del monto ya existente, sin cambiar el total de esa subcategoria.\n"
            "Si el usuario adjunta una imagen (captura de un resumen de gastos, estado de cuenta, ticket, etc), "
            "analizala vos mismo y extraé los montos y categorias relevantes para el financialUpdate, sin pedirle "
            "que te los tipee de nuevo. Los mismos criterios de agrupacion y busqueda aplican a los items que veas ahi.\n"
@@ -517,9 +562,16 @@ def chat():
         "depende de una decision personal del usuario (que tipo de cambio prefiere usar el, cuanto quiere invertir, "
         "etc) y no lo sabes, preguntaselo UNA vez y esperá su respuesta en el siguiente turno — nunca lo asumas ni "
         "te la respondas vos mismo en el acto.\n"
-        "Para conversion de pesos a dolares especificamente: NUNCA le preguntes al usuario que tipo de dolar usar. "
-        "Buscá vos la cotizacion del dolar MEP de hoy (es la referencia estandar para inversion) y convertí con eso "
-        "directamente, mencionandole que tipo de dolar usaste.\n"
+        "Para conversion de pesos a dolares especificamente: el capital mensual, si el usuario lo dio en pesos, YA "
+        "viene convertido a USD en el contexto de arriba — usalo directo, no hace falta que hagas nada. Pero si en "
+        "el chat aparece OTRO monto en pesos que necesites convertir (ej: el precio de una propiedad, un gasto, "
+        "cualquier cifra nueva en ARS), ahi si buscá vos la cotizacion del dolar MEP de hoy y convertí directo, sin "
+        "preguntarle al usuario que tipo de dolar usar.\n"
+        "OTRO PATRON PROHIBIDO (variante del mismo error): hacer una pregunta genuina y despues, EN EL MISMO "
+        "MENSAJE, decir algo como 'igual, con lo que ya tengo te armo el analisis' y seguir dando el analisis "
+        "completo con supuestos. Eso vuelve inutil la pregunta. Si tenes una pregunta genuina para el usuario "
+        "(algo que depende de su situacion personal y no podes resolver buscando), hacé LA pregunta y PARÁ tu "
+        "mensaje ahi, sin seguir armando nada mas en ese mismo mensaje. Esperá la respuesta antes de continuar.\n"
         "==============================================================\n\n"
         "===== REGLA CRITICA: NUNCA REPITAS UN GRAFICO YA MOSTRADO =====\n"
         "Si ya mostraste el grafico de distribucion de cartera en esta conversacion, NO lo vuelvas a mostrar, pase lo "
@@ -561,6 +613,15 @@ def chat():
         "ver el progreso de su objetivo en la pestaña 'Mi objetivo', y que se actualiza cada vez que le confirme al "
         "asesor que efectivamente hizo la inversion ese mes (aclarale que el numero que ve ahi es real, basado en lo "
         "que el confirma, no una proyeccion automatica).\n"
+        "===== CHECKLIST OBLIGATORIO ANTES DE MANDAR UN MENSAJE QUE PRESENTA UNA CARTERA =====\n"
+        "Todo mensaje que presente o actualice una cartera (paso 4) tiene que tener las TRES cosas, las tres en el "
+        "mismo mensaje, nunca faltando ninguna:\n"
+        "  1. El bloque ---CHART--- con los instrumentos y porcentajes.\n"
+        "  2. La explicacion de que el progreso se va a ver en la pestaña 'Mi objetivo', que arranca en 0% (es "
+        "normal) y se actualiza cuando el confirme su inversion.\n"
+        "  3. Una pregunta de cierre concreta ('¿Tenés alguna duda...?').\n"
+        "Si te falta cualquiera de las tres, tu respuesta esta incompleta — revisala antes de responder.\n"
+        "==============================================================\n"
         + CHART_SYSTEM_SUFFIX
     )
 
