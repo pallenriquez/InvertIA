@@ -430,23 +430,13 @@ def chat():
     is_advanced = user['plan']=='advanced'
 
     capital_usd = capital
-    if capital:
-        # Remove thousand separators (dots used in Argentine format: 1.000.000)
-        cleaned = re.sub(r'\.(?=\d{3})', '', capital)  # remove dots used as thousands separator
-        cleaned = cleaned.replace(',', '.')  # convert comma decimal to dot
-        nums = re.findall(r'[\d.]+', cleaned)
-        try:
-            num = float(nums[0]) if nums else 0
-        except (ValueError, IndexError):
-            num = 0
-        if any(w in capital.lower() for w in ['peso','ars','pesos','argentino',' p ']):
-            capital_usd = f"{capital} (~USD {num/1700:,.0f})"
+    tiene_pesos = capital and any(w in capital.lower() for w in ['peso','ars','pesos','argentino',' p '])
 
     high_ticket = any(w in objetivo.lower() for w in ['casa','departamento','auto','viaje','retiro','jubilacion','inmueble']) if objetivo else False
     history = get_history(session['user_id'],limit=12)
 
     ctx = []
-    if capital_usd: ctx.append(f"Capital mensual disponible: {capital_usd}")
+    if capital_usd: ctx.append(f"Capital mensual disponible: {capital_usd}"+(" (esta en pesos argentinos; buscá vos la cotizacion del dolar MEP de hoy para convertirlo, no se lo preguntes al usuario)" if tiene_pesos else ""))
     if objetivo: ctx.append(f"Objetivo: {objetivo}")
     if obj_monto: ctx.append(f"Monto objetivo: USD {obj_monto:,.0f}")
     if obj_plazo: ctx.append(f"Plazo proyectado: {obj_plazo} meses")
@@ -479,6 +469,12 @@ def chat():
            "(ej: Vivienda, Servicios, Impuestos, Alimentacion, Transporte, Cuidado personal, Entretenimiento, "
            "Deudas/Tarjetas, Salud, Educacion, Otros). Cada gasto individual va DENTRO de su subcategoria en el JSON "
            "(ver formato de dos niveles mas abajo).\n"
+           "PROHIBIDO INVENTAR GASTOS: el financialUpdate es un dato financiero real, NUNCA agregues un gasto, "
+           "subcategoria, o monto que el usuario no te haya confirmado explicitamente (por texto o en una imagen "
+           "que adjunto). Prohibido completar subcategorias con items de ejemplo o en $0 'por si acaso' (ej: nunca "
+           "agregues cosas como 'Yoga: $0' o 'Chino mandarin: $0' si el usuario no las menciono). Si no tenes "
+           "informacion de una subcategoria, simplemente no la incluyas en el JSON — mejor un panel incompleto que "
+           "uno con datos falsos.\n"
            "IDENTIFICAR GASTOS NO CLAROS: si un gasto tiene un nombre que no reconoces con certeza (nombre de banco, "
            "empresa, comercio local, sigla como 'ABL', 'AySA', 'Edesur', etc), buscalo en la web primero para saber "
            "que es exactamente (ej: buscar 'que es ABL Argentina') antes de asignarle categoria — muchos de estos son "
@@ -513,6 +509,24 @@ def chat():
         "No existen 'pasos intermedios' de aviso: o lo mostras ahora, o todavia no lo menciones y en cambio hace la pregunta que "
         "te falta para poder calcularlo.\n"
         "==============================================================\n\n"
+        "===== REGLA CRITICA: NUNCA TE PREGUNTES Y TE RESPONDAS SOLO =====\n"
+        "PROHIBIDO hacerle una pregunta al usuario y responderla vos mismo en ese mismo mensaje (ej: '¿Usás dolar "
+        "MEP, blue o el oficial? El dolar MEP cotiza hoy a...'). Eso es un error grave, no una forma de ser proactivo. "
+        "Regla simple: si el dato lo podes buscar en la web u obtener vos mismo (cotizaciones, tasas, que es un "
+        "gasto/empresa/sigla), buscalo y usalo directo, SIN preguntarle nada al usuario sobre eso. Si el dato "
+        "depende de una decision personal del usuario (que tipo de cambio prefiere usar el, cuanto quiere invertir, "
+        "etc) y no lo sabes, preguntaselo UNA vez y esperá su respuesta en el siguiente turno — nunca lo asumas ni "
+        "te la respondas vos mismo en el acto.\n"
+        "Para conversion de pesos a dolares especificamente: NUNCA le preguntes al usuario que tipo de dolar usar. "
+        "Buscá vos la cotizacion del dolar MEP de hoy (es la referencia estandar para inversion) y convertí con eso "
+        "directamente, mencionandole que tipo de dolar usaste.\n"
+        "==============================================================\n\n"
+        "===== REGLA CRITICA: NUNCA REPITAS UN GRAFICO YA MOSTRADO =====\n"
+        "Si ya mostraste el grafico de distribucion de cartera en esta conversacion, NO lo vuelvas a mostrar, pase lo "
+        "que pase, salvo que el usuario cambie montos/plazo y necesite una cartera DISTINTA. Un mensaje de "
+        "confirmacion del usuario ('genial', 'ok', 'dale', 'perfecto', 'gracias', 'todo bien', 'no tengo dudas') "
+        "NUNCA es un pedido de ver la cartera de nuevo — es solo una confirmacion, respondela en texto y nada mas.\n"
+        "==============================================================\n\n"
         "FLUJO:\n"
         "1. Si menciona objetivo (casa/auto/viaje/retiro) y no tenemos plazo → dar contexto del plazo habitual y preguntar cuando lo quiere, EN ESE MISMO MENSAJE:\n"
         "   - Casa/depto: 'Para una vivienda lo habitual es planificar entre 5 y 15 anos. ¿Vos para cuando lo tenias en mente?'\n"
@@ -532,11 +546,21 @@ def chat():
         "usuario simplemente confirma seguir con la cartera que ya le mostraste ('ok', 'dale', 'arranco con esto'), "
         "eso NO es aceptar un aumento — ver regla de confirmaciones simples mas abajo, no repitas nada.\n"
         "4. Cuando alineas expectativas → en ese MISMO mensaje presentar la cartera personalizada completa (nombres, "
-        "porcentajes, montos en USD/mes) CON el bloque ---CHART--- obligatorio incluido ahi mismo.\n"
+        "porcentajes, montos en USD/mes) CON el bloque ---CHART--- obligatorio incluido ahi mismo. En ese MISMO "
+        "mensaje, agregá tambien una linea corta explicando que a partir de ahora van a poder ver el progreso en la "
+        "pestaña 'Mi objetivo', que VA A ARRANCAR EN 0% (es normal, no es un error) hasta que le confirmes cuanto "
+        "llevás invertido, y que se va a ir actualizando cada vez que le cuentes que hiciste la inversion del mes.\n"
         "5. Si el usuario pide 'mas detalle' o nombres especificos de instrumentos ya presentados → buscá en la web si "
         "hace falta, y en ese MISMO mensaje dá el detalle concreto (nombres reales, tickers, como se compran, por que "
         "encajan) EN TEXTO, sin volver a incluir el bloque ---CHART--- (la cartera y el grafico ya se mostraron antes).\n"
-        "6. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Querés que te explique cómo empezar con alguno de estos instrumentos?' o '¿Tenés alguna duda sobre la distribución?'\n"
+        "6. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Tenés alguna duda sobre la "
+        "distribución o cómo empezar?'\n"
+        "   - Si en el siguiente turno el usuario tiene una duda concreta → respondela en texto, SIN repetir el grafico.\n"
+        "   - Si el usuario responde que no tiene dudas, o con una confirmacion simple ('no', 'genial', 'todo bien', "
+        "'ok', 'dale', 'gracias') → NO repitas la cartera ni el grafico. En cambio, contale brevemente que va a poder "
+        "ver el progreso de su objetivo en la pestaña 'Mi objetivo', y que se actualiza cada vez que le confirme al "
+        "asesor que efectivamente hizo la inversion ese mes (aclarale que el numero que ve ahi es real, basado en lo "
+        "que el confirma, no una proyeccion automatica).\n"
         + CHART_SYSTEM_SUFFIX
     )
 
