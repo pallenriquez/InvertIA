@@ -42,6 +42,7 @@ def init_db():
             objetivo_plazo_meses INTEGER,
             objetivo_plazo_deseado_meses INTEGER,
             capital_mensual REAL,
+            objetivo_retorno_anual REAL,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
@@ -73,7 +74,7 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     ''')
-    for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL']:
+    for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
         except: pass
     conn.commit()
@@ -208,6 +209,7 @@ def me():
             'capital':prof['capital'],'objetivo':prof['objetivo'],
             'objetivoMonto':prof['objetivo_monto'],'objetivoPlazoMeses':prof['objetivo_plazo_meses'],
             'objetivoPlazoDeseadoMeses':prof['objetivo_plazo_deseado_meses'],'capitalMensual':prof['capital_mensual'],
+            'objetivoRetornoAnual':prof['objetivo_retorno_anual'],
         }
     if fin:
         result['financialData'] = {'ingresos':fin['ingresos'],'egresos':fin['egresos'],'categorias':json.loads(fin['categorias']) if fin['categorias'] else {}}
@@ -334,13 +336,25 @@ NO uses ---CHART--- cuando:
 
 FORMATO cuando corresponde:
 ---CHART---
-{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":25,"description":"Bolsa argentina","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":30,"description":"Renta fija en dolares","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":60000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":294}}
+{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":25,"description":"Bolsa argentina","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":30,"description":"Renta fija en dolares","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":60000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":294,"retornoAnualEstimado":8}}
+
+Cuando el mensaje sea sobre control financiero (plan Advanced), el bloque puede llevar SOLO financialUpdate, sin instruments ni objetivoUpdate:
+---CHART---
+{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Alquiler":250000,"Comida":150000,"Transporte":80000,"Otros":70000}}}
 
 REGLAS del JSON:
 - pct suma exactamente 100
 - Minimo 2 instrumentos reales
 - data: rendimiento del instrumento comenzando en 1000
 - objetivoUpdate: incluir cuando tenes monto + plazo + capital confirmados
+- retornoAnualEstimado: OBLIGATORIO incluirlo siempre que mandes objetivoUpdate. Es el % de retorno anual promedio
+  que asumiste (ponderado segun la mezcla de instrumentos de la cartera) para calcular que ese monto+plazo+capital
+  alcanzan la meta. El frontend lo usa para proyectar con interes compuesto, asi que tiene que ser el MISMO numero
+  que usaste vos internamente al calcular el plazo o el monto (no un numero aleatorio o distinto). Para una cartera
+  conservadora tipicamente ronda 5-7%, moderada 7-9%, arriesgada 9-13% anual, pero usa el numero real que calculaste.
+- financialUpdate: incluir (plan Advanced) apenas el usuario te de ingresos y/o egresos mensuales. Numeros en pesos
+  argentinos, sin puntos de miles ni simbolo $ (ej: 800000, no "800.000" ni "$800.000"). categorias es opcional: un
+  objeto nombre->monto con sus gastos principales, si los tenes.
 =====
 """
 
@@ -384,8 +398,19 @@ def chat():
         f"Perfil: {profile}. Conservador {scores[0]}%, Moderado {scores[1]}%, Arriesgado {scores[2]}%.\n"
         + ('\n'.join(ctx)+'\n' if ctx else '')
         + ("IMPORTANTE: objetivo de alto valor, siempre en USD.\n" if high_ticket else "")
-        + ("Plan Advanced: acceso a control financiero personal.\n" if is_advanced else
-           "Plan Pro: si pregunta por control financiero/gastos/presupuesto, decile que es parte del plan Advanced.\n")
+        + ("\n===== CONTROL FINANCIERO (plan Advanced) =====\n"
+           "Cuando el usuario pida ayuda para organizar sus finanzas, armar un presupuesto, o entender en que gasta:\n"
+           "1. En un PRIMER mensaje, preguntale concretamente (no preguntas genericas de deudas/fondo de emergencia "
+           "salvo que el ya haya dado ingresos y egresos): '¿Cuáles son tus ingresos mensuales totales? ¿Y cuánto "
+           "gastás en total por mes?'\n"
+           "2. En cuanto tengas ingresos Y egresos (aunque sean aproximados), en ESE MISMO mensaje incluí un bloque "
+           "---CHART--- con un financialUpdate en el JSON (formato mas abajo) para que se actualice su panel financiero, "
+           "junto con un analisis breve en texto (esta gastando mas de lo que gana, tiene margen para invertir mas, etc).\n"
+           "3. Despues podes pedir que desglose los egresos por categoria (alquiler, comida, transporte, servicios, ocio) "
+           "para refinar el financialUpdate con categorias.\n"
+           "==========\n" if is_advanced else
+           "Plan Pro: si pregunta por control financiero/gastos/presupuesto/organizar sus finanzas, decile en ese mismo "
+           "mensaje que ese panel es parte del plan Advanced, sin hacerle las preguntas de ingresos/egresos.\n")
         + "\n===== BUSQUEDA WEB =====\n"
         "Tenes acceso a busqueda web. USALA cuando:\n"
         "- El usuario pide instrumentos especificos (que bonos, que acciones, que ticker, que ON) → buscá los "
@@ -413,8 +438,10 @@ def chat():
         "   - Auto: 'Un auto generalmente se planifica entre 1 y 3 anos. ¿Cuando lo querias tener?'\n"
         "   - Viaje: 'Un viaje suele planificarse entre 6 meses y 2 anos. ¿Cuando lo tenias pensado?'\n"
         "   - Retiro: 'El retiro suele planificarse a 10-30 anos. ¿En que horizonte estas pensando?'\n"
-        "2. Cuando tenes capital + objetivo + plazo → en ese MISMO mensaje calculá si es realista (con los numeros concretos "
-        "ya calculados, no 'te lo calculo'), y si no alcanza sugerir aumentar inversion O estirar plazo, con cifras.\n"
+        "2. Cuando tenes capital + objetivo + plazo → en ese MISMO mensaje calculá si es realista ASUMIENDO que el "
+        "capital se invierte (no que se guarda sin rendimiento): definí un % de retorno anual razonable segun el perfil "
+        "y la mezcla de instrumentos, calculá con esa tasa (interes compuesto, no suma simple) si el monto final "
+        "alcanza la meta, y si no alcanza sugerir aumentar inversion O estirar plazo, con cifras concretas.\n"
         "3. Si acepta aumentar inversion → en ese MISMO mensaje mostrar la proyeccion comparativa completa, con el bloque "
         "---CHART--- incluyendo data2 en el JSON. No lo pospongas para el siguiente turno.\n"
         "4. Cuando alineas expectativas → en ese MISMO mensaje presentar la cartera personalizada completa (nombres, "
@@ -451,15 +478,16 @@ def chat():
                 print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300])
 
         if obj_update:
-            conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
+            conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,objetivo_retorno_anual,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
                 objetivo_monto=COALESCE(excluded.objetivo_monto,objetivo_monto),
                 objetivo_plazo_meses=COALESCE(excluded.objetivo_plazo_meses,objetivo_plazo_meses),
                 objetivo_plazo_deseado_meses=COALESCE(excluded.objetivo_plazo_deseado_meses,objetivo_plazo_deseado_meses),
-                capital_mensual=COALESCE(excluded.capital_mensual,capital_mensual),updated_at=excluded.updated_at''',
+                capital_mensual=COALESCE(excluded.capital_mensual,capital_mensual),
+                objetivo_retorno_anual=COALESCE(excluded.objetivo_retorno_anual,objetivo_retorno_anual),updated_at=excluded.updated_at''',
                 (session['user_id'],profile,profile,json.dumps(scores),capital,objetivo,
                  obj_update.get('monto'),obj_update.get('plazoMeses'),obj_update.get('plazoDeseadoMeses'),
-                 obj_update.get('capitalMensual'),datetime.now().isoformat()))
+                 obj_update.get('capitalMensual'),obj_update.get('retornoAnualEstimado'),datetime.now().isoformat()))
             conn.commit()
 
         if fin_update and is_advanced:
@@ -476,6 +504,15 @@ def chat():
         return jsonify({'ok':True,'text':text,'instruments':instruments,'objetivoUpdate':obj_update,'financialUpdate':fin_update})
     except Exception as e:
         print('Chat error:',e); conn.close(); return jsonify({'ok':False,'error':str(e)})
+
+@app.route('/api/reset-profile', methods=['POST'])
+def reset_profile():
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    conn.execute('DELETE FROM user_profile WHERE user_id=?',(session['user_id'],))
+    conn.execute('DELETE FROM chat_messages WHERE user_id=?',(session['user_id'],))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True})
 
 @app.route('/api/clear-chat', methods=['POST'])
 def clear_chat():
