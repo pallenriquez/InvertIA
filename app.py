@@ -69,6 +69,7 @@ def init_db():
             categorias TEXT,
             gastos_hormiga TEXT,
             cuotas TEXT,
+            ahorro_declarado REAL,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
@@ -98,7 +99,7 @@ def init_db():
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
         except: pass
-    for col in ['gastos_hormiga TEXT','cuotas TEXT']:
+    for col in ['gastos_hormiga TEXT','cuotas TEXT','ahorro_declarado REAL']:
         try: conn.execute(f'ALTER TABLE financial_data ADD COLUMN {col}')
         except: pass
     conn.commit()
@@ -240,7 +241,8 @@ def me():
         result['financialData'] = {'ingresos':fin['ingresos'],'egresos':fin['egresos'],
             'categorias':json.loads(fin['categorias']) if fin['categorias'] else {},
             'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {},
-            'cuotas':json.loads(fin['cuotas']) if fin['cuotas'] else []}
+            'cuotas':json.loads(fin['cuotas']) if fin['cuotas'] else [],
+            'ahorroDeclarado':fin['ahorro_declarado']}
     result['payments'] = [dict(p) for p in pmts]
     result['daysSinceLastVisit'] = days_since(user['id'])
     return jsonify(result)
@@ -313,7 +315,7 @@ def add_movement():
 
 @app.route('/api/edit-item', methods=['POST'])
 def edit_item():
-    """Editar el monto de un gasto puntual del panel, o eliminarlo (si no se manda 'monto').
+    """Editar el monto de un gasto puntual del panel, moverlo a otra categoria/seccion, o eliminarlo.
     Ajusta egresos por la diferencia para que el total no quede inconsistente."""
     if not session.get('user_id'): return jsonify({'ok':False})
     conn = get_db()
@@ -323,7 +325,7 @@ def edit_item():
     section = d.get('section')  # 'categorias' | 'gastosHormiga'
     subcat = (d.get('subcategoria') or '').strip()
     concepto = (d.get('concepto') or '').strip()
-    nuevo_monto = d.get('monto')  # None/ausente = eliminar el item
+    eliminar = 'monto' not in d and not d.get('nuevaSubcategoria') and not d.get('nuevaSeccion')
     if section not in ('categorias','gastosHormiga') or not subcat or not concepto:
         conn.close(); return jsonify({'ok':False,'error':'Datos incompletos.'})
 
@@ -332,22 +334,26 @@ def edit_item():
     egresos = row['egresos'] or 0
     categorias = json.loads(row['categorias']) if row['categorias'] else {}
     hormiga = json.loads(row['gastos_hormiga']) if row['gastos_hormiga'] else {}
-    target = categorias if section == 'categorias' else hormiga
+    sections = {'categorias':categorias,'gastosHormiga':hormiga}
+    origen = sections[section]
 
     old_val = 0
-    if subcat in target and isinstance(target.get(subcat), dict) and concepto in target[subcat]:
-        old_val = target[subcat][concepto]
+    if subcat in origen and isinstance(origen.get(subcat), dict) and concepto in origen[subcat]:
+        old_val = origen[subcat][concepto]
+        del origen[subcat][concepto]
+        if not origen[subcat]: del origen[subcat]
 
-    if nuevo_monto is None:
-        if subcat in target and isinstance(target.get(subcat), dict) and concepto in target[subcat]:
-            del target[subcat][concepto]
-            if not target[subcat]: del target[subcat]
+    if eliminar:
         egresos = max(0, egresos - old_val)
     else:
-        try: nuevo_monto = float(nuevo_monto)
+        try: nuevo_monto = float(d.get('monto')) if d.get('monto') is not None else old_val
         except (ValueError, TypeError): nuevo_monto = old_val
-        if subcat not in target or not isinstance(target.get(subcat), dict): target[subcat] = {}
-        target[subcat][concepto] = nuevo_monto
+        nueva_seccion = d.get('nuevaSeccion') or section
+        nueva_subcat = (d.get('nuevaSubcategoria') or '').strip() or subcat
+        if nueva_seccion not in sections: nueva_seccion = section
+        destino = sections[nueva_seccion]
+        if nueva_subcat not in destino or not isinstance(destino.get(nueva_subcat), dict): destino[nueva_subcat] = {}
+        destino[nueva_subcat][concepto] = nuevo_monto
         egresos = max(0, egresos - old_val + nuevo_monto)
 
     conn.execute('UPDATE financial_data SET egresos=?, categorias=?, gastos_hormiga=?, updated_at=? WHERE user_id=?',
@@ -364,6 +370,8 @@ def add_cuota():
     if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
     d = request.json or {}
     concepto = (d.get('concepto') or '').strip()
+    tarjeta = (d.get('tarjeta') or '').strip() or 'Sin especificar'
+    categoria = (d.get('categoria') or '').strip() or 'Otros'
     try:
         monto_cuota = float(d.get('montoCuota') or 0)
         cuotas_totales = int(d.get('cuotasTotales') or 0)
@@ -377,7 +385,53 @@ def add_cuota():
     row = conn.execute('SELECT cuotas FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
     cuotas_list = json.loads(row['cuotas']) if row and row['cuotas'] else []
     cuotas_list = [c for c in cuotas_list if (c.get('concepto') or '').strip().lower() != concepto.lower()]
-    cuotas_list.append({'concepto':concepto,'montoCuota':monto_cuota,'cuotasTotales':cuotas_totales,'cuotasPagadas':cuotas_pagadas})
+    cuotas_list.append({'concepto':concepto,'tarjeta':tarjeta,'categoria':categoria,
+                         'montoCuota':monto_cuota,'cuotasTotales':cuotas_totales,'cuotasPagadas':cuotas_pagadas})
+
+    conn.execute('''INSERT INTO financial_data (user_id,cuotas,updated_at) VALUES (?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET cuotas=excluded.cuotas, updated_at=excluded.updated_at''',
+        (session['user_id'], json.dumps(cuotas_list), datetime.now().isoformat()))
+    conn.commit()
+    fin = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    conn.close()
+    return jsonify({'ok':True,'financialData':{
+        'ingresos':fin['ingresos'] or 0,'egresos':fin['egresos'] or 0,
+        'categorias':json.loads(fin['categorias']) if fin['categorias'] else {},
+        'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {},
+        'cuotas':cuotas_list}})
+
+@app.route('/api/edit-cuota', methods=['POST'])
+def edit_cuota():
+    """Editar los datos de una cuota existente (identificada por su concepto original), o eliminarla."""
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    user = conn.execute('SELECT plan FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
+    d = request.json or {}
+    concepto_original = (d.get('conceptoOriginal') or '').strip()
+    eliminar = bool(d.get('eliminar'))
+    if not concepto_original:
+        conn.close(); return jsonify({'ok':False,'error':'Falta identificar la cuota.'})
+
+    row = conn.execute('SELECT cuotas FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    cuotas_list = json.loads(row['cuotas']) if row and row['cuotas'] else []
+    cuotas_list = [c for c in cuotas_list if (c.get('concepto') or '').strip().lower() != concepto_original.lower()]
+
+    if not eliminar:
+        concepto = (d.get('concepto') or concepto_original).strip()
+        tarjeta = (d.get('tarjeta') or '').strip() or 'Sin especificar'
+        categoria = (d.get('categoria') or '').strip() or 'Otros'
+        try:
+            monto_cuota = float(d.get('montoCuota') or 0)
+            cuotas_totales = int(d.get('cuotasTotales') or 0)
+            cuotas_pagadas = int(d.get('cuotasPagadas') or 0)
+        except (ValueError, TypeError):
+            monto_cuota, cuotas_totales, cuotas_pagadas = 0, 0, 0
+        if not concepto or monto_cuota <= 0 or cuotas_totales <= 0:
+            conn.close(); return jsonify({'ok':False,'error':'Completá concepto, monto por cuota y cantidad de cuotas.'})
+        cuotas_pagadas = max(0, min(cuotas_pagadas, cuotas_totales))
+        cuotas_list.append({'concepto':concepto,'tarjeta':tarjeta,'categoria':categoria,
+                             'montoCuota':monto_cuota,'cuotasTotales':cuotas_totales,'cuotasPagadas':cuotas_pagadas})
 
     conn.execute('''INSERT INTO financial_data (user_id,cuotas,updated_at) VALUES (?,?,?)
         ON CONFLICT(user_id) DO UPDATE SET cuotas=excluded.cuotas, updated_at=excluded.updated_at''',
@@ -527,7 +581,7 @@ FORMATO cuando corresponde:
 
 Cuando el mensaje sea sobre control financiero (plan Advanced), el bloque puede llevar SOLO financialUpdate, sin instruments ni objetivoUpdate:
 ---CHART---
-{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Vivienda":{"Alquiler":250000,"ABL":12000,"Expensas":60000},"Impuestos":{"Monotributo":45000},"Alimentacion":{"Supermercado":180000}},"gastosHormiga":{"Comida y delivery":{"Cafeterias":18000,"Delivery":45000},"Suscripciones":{"Streaming":12000}},"cuotas":[{"concepto":"Notebook","montoCuota":25000,"cuotasTotales":12,"cuotasPagadas":3},{"concepto":"Viaje a Bariloche","montoCuota":40000,"cuotasTotales":6,"cuotasPagadas":1}]}}
+{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Vivienda":{"Alquiler":250000,"ABL":12000,"Expensas":60000},"Impuestos":{"Monotributo":45000},"Alimentacion":{"Supermercado":180000}},"gastosHormiga":{"Comida y delivery":{"Cafeterias":18000,"Delivery":45000},"Suscripciones":{"Streaming":12000}},"cuotas":[{"concepto":"Notebook","tarjeta":"Visa BBVA","categoria":"Tecnologia","montoCuota":25000,"cuotasTotales":12,"cuotasPagadas":3},{"concepto":"Viaje a Bariloche","tarjeta":"Naranja X","categoria":"Viajes","montoCuota":40000,"cuotasTotales":6,"cuotasPagadas":1}]}}
 
 REGLAS del JSON:
 - pct suma exactamente 100
@@ -547,9 +601,16 @@ REGLAS del JSON:
   gastosHormiga: siempre agrupalo dentro de una subcategoria (ver reglas de agrupacion y busqueda web mas arriba).
   Ambos objetos opcionales pero recomendados.
 - cuotas: array de objetos, uno por cada compra en cuotas que el usuario te confirme. Cada objeto: concepto (que
-  es), montoCuota (lo que paga por mes, numero), cuotasTotales (cuantas cuotas tiene en total), cuotasPagadas
-  (cuantas ya pago). Igual que el resto: NUNCA inventes una cuota que el usuario no te confirmo, ni le agregues
-  cuotas de ejemplo.
+  es), tarjeta (en que tarjeta/medio de pago la esta pagando, ej 'Visa BBVA'), categoria (ej: Tecnologia, Viajes,
+  Hogar, Salud), montoCuota (lo que paga por mes, numero), cuotasTotales (cuantas cuotas tiene en total),
+  cuotasPagadas (cuantas ya pago). Si no te aclara la tarjeta o la categoria, preguntaselas — son importantes
+  porque el panel agrupa las cuotas por tarjeta. Igual que el resto: NUNCA inventes una cuota que el usuario no
+  te confirmo, ni le agregues cuotas de ejemplo.
+- ahorroMensualDeclarado: SOLO incluilo si en la conversacion de FINANZAS el usuario te aclara explicitamente un
+  monto distinto al capital mensual que ya definio cuando armaron su objetivo de inversion (ej: 'en realidad ahora
+  ahorro menos, unos 250000 por mes'). Si no dice nada nuevo, NO mandes este campo — el panel ya usa por defecto el
+  capital mensual que el usuario definio al armar su objetivo, no hace falta que lo repitas ni que lo calcules vos
+  a partir de ingresos menos egresos (eso da un numero inflado, no es lo mismo que el ahorro real declarado).
 =====
 """
 
@@ -624,12 +685,18 @@ def chat():
            "   - Egresos mensuales totales\n"
            "   - Gastos FIJOS grandes y recurrentes (alquiler/hipoteca, servicios, seguros, cuotas, prepaga, etc)\n"
            "   - Gastos HORMIGA: gastos chicos y frecuentes que suelen pasar desapercibidos pero suman (cafes, "
-           "delivery, apps de comida, suscripciones de streaming, salidas, taxis/uber). Preguntaselos especificamente "
-           "si el usuario no los menciono solo.\n"
+           "delivery, apps de comida, salidas a comer afuera, antojos, suscripciones de streaming, taxis/uber). "
+           "Preguntaselos especificamente si el usuario no los menciono solo. IMPORTANTE — NO CONFUNDIR: la compra "
+           "de supermercado, carniceria, verduleria y demas alimentacion BASICA/necesaria para vivir NUNCA es un "
+           "gasto hormiga, es un gasto FIJO (va en categorias, subcategoria tipo 'Alimentacion'). Gasto hormiga es "
+           "lo discrecional y evitable (un cafe de mas, pedir delivery en vez de cocinar), no la compra semanal "
+           "de comida que la familia necesita.\n"
            "   - CUOTAS: en algun momento de esta primera charla (no hace falta que sea la primera pregunta), "
            "ofrecele armar el seguimiento de cuotas: algo como '¿Sabías que si me contás en qué estás pagando en "
-           "cuotas (qué es, cuánto pagás por mes, cuántas cuotas en total y cuántas ya pagaste) te puedo mostrar "
-           "cuánto te queda pendiente de cada una?'. Si acepta, pedile esos 4 datos por cada cuota.\n"
+           "cuotas (en que tarjeta, que es, la categoria, cuánto pagás por mes, cuántas cuotas en total y cuántas "
+           "ya pagaste) te puedo mostrar cuánto te queda pendiente, agrupado por tarjeta?'. Si acepta, pedile esos "
+           "6 datos por cada cuota: tarjeta (ej: Visa BBVA, Naranja X), concepto (que es), categoria (ej: "
+           "Tecnologia, Viajes, Hogar, Salud), montoCuota, cuotasTotales, cuotasPagadas.\n"
            "2. En cuanto tengas ingresos y egresos (con o sin desglose todavia), en ESE MISMO mensaje dale tu analisis "
            "concreto en texto: si esta gastando mas de lo que gana, cuanto margen real tiene para invertir, en que "
            "rubro parece concentrarse el gasto hormiga. Se especifico con numeros, nunca generico. IMPORTANTE: si "
@@ -719,6 +786,15 @@ def chat():
         "completo con supuestos. Eso vuelve inutil la pregunta. Si tenes una pregunta genuina para el usuario "
         "(algo que depende de su situacion personal y no podes resolver buscando), hacé LA pregunta y PARÁ tu "
         "mensaje ahi, sin seguir armando nada mas en ese mismo mensaje. Esperá la respuesta antes de continuar.\n"
+        "TERCERA VARIANTE PROHIBIDA: narrar tu propio proceso de busqueda o investigacion en el texto de la "
+        "respuesta (ej: 'necesito identificar bien algunos items de tu planilla... Perfecto, ya identifiqué todo lo "
+        "que necesitaba'). Si vas a buscar algo en la web para identificar un gasto o dato, hacelo en silencio y "
+        "presentá el resultado ya incorporado a tu respuesta — nunca expongas el paso intermedio de 'voy a buscar / "
+        "ya busqué'. El usuario no necesita ver tu proceso, solo el resultado.\n"
+        "NO REPITAS UNA CONFIRMACION QUE YA DISTE: si en un turno anterior ya le confirmaste algo al usuario (ej: "
+        "'ya sumamos USD 328 a tu progreso'), no lo repitas de nuevo palabra por palabra en un mensaje posterior "
+        "solo porque el usuario menciono una palabra relacionada (ej: 'ahorro') en su siguiente pregunta. Anda "
+        "directo a responder lo nuevo que te esta preguntando.\n"
         "==============================================================\n\n"
         "===== REGLA CRITICA: NUNCA REPITAS UN GRAFICO YA MOSTRADO =====\n"
         "Si ya mostraste el grafico de distribucion de cartera en esta conversacion, NO lo vuelvas a mostrar, pase lo "
@@ -835,14 +911,16 @@ def chat():
             conn.commit()
 
         if fin_update and is_advanced:
-            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,cuotas,updated_at) VALUES (?,?,?,?,?,?,?)
+            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,cuotas,ahorro_declarado,updated_at) VALUES (?,?,?,?,?,?,?,?)
                 ON CONFLICT(user_id) DO UPDATE SET ingresos=COALESCE(excluded.ingresos,ingresos),
                 egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),
                 gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),
-                cuotas=COALESCE(excluded.cuotas,cuotas),updated_at=excluded.updated_at''',
+                cuotas=COALESCE(excluded.cuotas,cuotas),
+                ahorro_declarado=COALESCE(excluded.ahorro_declarado,ahorro_declarado),updated_at=excluded.updated_at''',
                 (session['user_id'],fin_update.get('ingresos'),fin_update.get('egresos'),
                  json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),
                  json.dumps(fin_update.get('cuotas')) if fin_update.get('cuotas') is not None else None,
+                 fin_update.get('ahorroMensualDeclarado'),
                  datetime.now().isoformat()))
             # Snapshot del mes actual, para poder ver la evolucion mes a mes en el historial
             current_period = datetime.now().strftime('%Y-%m')
