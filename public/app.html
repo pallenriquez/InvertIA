@@ -375,16 +375,26 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
   </div>
 </div>
 
-<!-- Add Cuota Modal -->
+<!-- Add/Edit Cuota Modal -->
 <div class="modal-overlay" id="modal-cuota">
   <div class="modal-box">
     <div class="modal-header">
-      <span class="modal-title">Agregar compra en cuotas</span>
+      <span class="modal-title" id="cu-modal-title">Agregar compra en cuotas</span>
       <button class="modal-close" onclick="closeModal('modal-cuota')">×</button>
     </div>
     <div class="modal-body">
       <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">¿Qué es?</label>
       <input type="text" id="cu-concepto" placeholder="Ej: Notebook, Viaje a Bariloche..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Tarjeta</label>
+          <input type="text" id="cu-tarjeta" placeholder="Ej: Visa BBVA" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Categoría</label>
+          <input type="text" id="cu-categoria" placeholder="Ej: Tecnología" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+        </div>
+      </div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Monto por cuota (ARS)</label>
       <input type="number" id="cu-monto" placeholder="0" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
@@ -398,7 +408,10 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
         </div>
       </div>
       <div id="cu-error" style="display:none;color:#EF4444;font-size:12.5px;margin-bottom:.75rem;"></div>
-      <button onclick="submitCuota()" id="cu-submit-btn" style="width:100%;padding:.8rem;border:none;border-radius:10px;background:var(--purple);color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Guardar cuota</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="deleteCuota()" id="cu-delete-btn" style="display:none;flex:1;padding:.75rem;border:1.5px solid #EF4444;border-radius:10px;background:transparent;color:#EF4444;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Eliminar</button>
+        <button onclick="submitCuota()" id="cu-submit-btn" style="flex:2;padding:.75rem;border:none;border-radius:10px;background:var(--purple);color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Guardar cuota</button>
+      </div>
     </div>
   </div>
 </div>
@@ -413,6 +426,9 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     <div class="modal-body">
       <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Monto (ARS)</label>
       <input type="number" id="ei-monto" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:1rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Mover a categoría <span style="font-weight:400;color:var(--text2);">(tocá si el asesor la categorizó mal)</span></label>
+      <select id="ei-nueva-categoria" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.4rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);"></select>
+      <input type="text" id="ei-nueva-categoria-otra" placeholder="O escribí una categoría nueva..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:1rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
       <div id="ei-error" style="display:none;color:#EF4444;font-size:12.5px;margin-bottom:.75rem;"></div>
       <div style="display:flex;gap:8px;">
         <button onclick="deleteEditItem()" id="ei-delete-btn" style="flex:1;padding:.75rem;border:1.5px solid #EF4444;border-radius:10px;background:transparent;color:#EF4444;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Eliminar</button>
@@ -455,6 +471,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
     <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
     <button id="tab-fin-btn" onclick="switchTab('fin')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💰 Finanzas</button>
+    <button id="tab-cuotas-btn" onclick="switchTab('cuotas')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💳 Cuotas</button>
   </div>
 </div>
 
@@ -592,6 +609,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           <div id="fin-savings-wrap" style="display:none;background:linear-gradient(135deg,rgba(0,196,140,.14),rgba(0,196,140,.04));border:1px solid rgba(0,196,140,.25);border-radius:14px;padding:1rem;">
             <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Tasa de ahorro</div>
             <div id="fin-savings-rate" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--green);">—</div>
+            <div id="fin-savings-note" style="font-size:9.5px;color:var(--text2);margin-top:2px;line-height:1.3;"></div>
           </div>
         </div>
         <div id="fin-savings-compare" style="font-size:12px;margin:-1.25rem 0 .5rem;text-align:center;"></div>
@@ -633,20 +651,24 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           </div>
         </div>
 
-        <!-- Cuotas pendientes -->
-        <div id="fin-cuotas-section" style="margin-top:1.75rem;display:none;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-            <div style="font-size:13px;font-weight:700;color:var(--text);">💳 Cuotas pendientes</div>
-            <button onclick="openAddCuotaModal()" style="padding:5px 11px;border:1.5px solid var(--purple);border-radius:8px;background:transparent;color:var(--purple);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Cuota</button>
-          </div>
-          <div id="fin-cuotas-list"></div>
-        </div>
-        <div id="fin-cuotas-empty" style="display:none;margin-top:1.75rem;">
-          <button onclick="openAddCuotaModal()" style="width:100%;padding:.9rem;border:1.5px dashed var(--border);border-radius:12px;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">💳 + Agregar una compra en cuotas</button>
-        </div>
-
         <div id="fin-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
           Contale a tu asesor tus ingresos y gastos para activar tu panel financiero. 💬
+        </div>
+      </div>
+    </div>
+
+    <!-- CUOTAS TAB -->
+    <div id="tab-cuotas" style="display:none;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <h2 style="font-size:20px;font-weight:700;color:var(--text);">💳 Tus cuotas</h2>
+          <button onclick="openAddCuotaModal()" style="padding:7px 13px;border:none;border-radius:9px;background:var(--purple);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Cuota</button>
+        </div>
+        <div id="fin-cuotas-section" style="display:none;">
+          <div id="fin-cuotas-list"></div>
+        </div>
+        <div id="fin-cuotas-empty" style="display:none;color:var(--text2);font-size:14px;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;text-align:center;">
+          Todavía no tenés ninguna compra en cuotas cargada. Contale a tu asesor en qué estás pagando, o agregala vos con el botón de arriba. 💳
         </div>
       </div>
     </div>
@@ -742,7 +764,7 @@ function closeConfigAndClearChat(){document.getElementById('config-dropdown').cl
 function switchTab(tab){
   const isChat = tab==='chat';
   if(tab==='fin' && !finHistoryLoaded && userData && userData.plan==='advanced'){finHistoryLoaded=true;loadFinHistory();}
-  ['chat','goal','fin'].forEach(t=>{
+  ['chat','goal','fin','cuotas'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = (t===tab)?'block':'none';
     const btn=document.getElementById('tab-'+t+'-btn');
@@ -767,7 +789,7 @@ function switchTab(tab){
 
 // GOAL TOAST
 let goalToastShown = false, finToastShown = false, finHistoryLoaded = false;
-let finState = {ingresos:null, egresos:null, categorias:{}, gastosHormiga:{}, cuotas:[]};
+let finState = {ingresos:null, egresos:null, categorias:{}, gastosHormiga:{}, cuotas:[], ahorroDeclarado:null};
 function applyFinUpdate(newData){
   // Combina la actualizacion parcial que llega (del chat, o de un atajo manual) con lo que ya
   // se sabia, en vez de reemplazar todo el panel — asi una actualizacion que solo toca "cuotas"
@@ -778,6 +800,7 @@ function applyFinUpdate(newData){
   if(newData.categorias!=null) finState.categorias=newData.categorias;
   if(newData.gastosHormiga!=null) finState.gastosHormiga=newData.gastosHormiga;
   if(newData.cuotas!=null) finState.cuotas=newData.cuotas;
+  if(newData.ahorroDeclarado!=null) finState.ahorroDeclarado=newData.ahorroDeclarado;
   updateFinPanel(finState);
 }
 function showAppToast(title,msg){
@@ -1148,6 +1171,7 @@ function updateFinPanel(fin){
   if(!fin||(fin.ingresos==null&&fin.egresos==null))return;
   document.getElementById('tab-bar').style.display='block';
   document.getElementById('tab-fin-btn').style.display='flex';
+  document.getElementById('tab-cuotas-btn').style.display='flex';
   document.getElementById('fin-pending').style.display='none';
 
   const ingresos=fin.ingresos||0, egresos=fin.egresos||0, bal=ingresos-egresos;
@@ -1203,11 +1227,17 @@ function updateFinPanel(fin){
     hormigaWrap.style.display='none';
   }
 
-  updateSavingsRateCard(ingresos,egresos,fin.period);
+  updateSavingsRateCard(ingresos,egresos,fin.period,fin.ahorroDeclarado);
   renderCuotas(fin.cuotas||[]);
   setTimeout(showFinToast, 600);
 }
 
+const CARD_ICONS={'visa':'💳','mastercard':'💳','naranja':'🟠','amex':'💳','mercado':'💙','ualá':'⚫','uala':'⚫','brubank':'🟣'};
+function getCardIcon(tarjeta){
+  const low=(tarjeta||'').toLowerCase();
+  for(const [k,v] of Object.entries(CARD_ICONS)){if(low.includes(k))return v;}
+  return '💳';
+}
 function renderCuotas(cuotas){
   const section=document.getElementById('fin-cuotas-section');
   const empty=document.getElementById('fin-cuotas-empty');
@@ -1218,24 +1248,44 @@ function renderCuotas(cuotas){
   }
   empty.style.display='none';
   section.style.display='block';
-  document.getElementById('fin-cuotas-list').innerHTML=cuotas.map(c=>{
-    const totales=Number(c.cuotasTotales)||0, pagadas=Math.min(Number(c.cuotasPagadas)||0,totales);
-    const restantes=Math.max(0,totales-pagadas);
-    const montoCuota=Number(c.montoCuota)||0;
-    const montoRestante=montoCuota*restantes;
-    const pct=totales?Math.round((pagadas/totales)*100):0;
-    return `<div style="background:var(--bg3);border-radius:12px;padding:.85rem 1rem;margin-bottom:.6rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-        <span style="font-weight:700;font-size:13.5px;color:var(--text);">${c.concepto}</span>
-        <span style="font-size:12px;color:var(--text2);">${pagadas} de ${totales} cuotas</span>
+  // Agrupar por tarjeta
+  const porTarjeta={};
+  cuotas.forEach(c=>{
+    const t=c.tarjeta||'Sin especificar';
+    if(!porTarjeta[t]) porTarjeta[t]=[];
+    porTarjeta[t].push(c);
+  });
+  document.getElementById('fin-cuotas-list').innerHTML=Object.entries(porTarjeta).map(([tarjeta,items])=>{
+    const totalPendiente=items.reduce((s,c)=>{
+      const totales=Number(c.cuotasTotales)||0,pagadas=Math.min(Number(c.cuotasPagadas)||0,totales);
+      return s+(Number(c.montoCuota)||0)*Math.max(0,totales-pagadas);
+    },0);
+    const itemsHtml=items.map(c=>{
+      const totales=Number(c.cuotasTotales)||0, pagadas=Math.min(Number(c.cuotasPagadas)||0,totales);
+      const restantes=Math.max(0,totales-pagadas);
+      const montoCuota=Number(c.montoCuota)||0;
+      const montoRestante=montoCuota*restantes;
+      const pct=totales?Math.round((pagadas/totales)*100):0;
+      return `<div onclick='openEditCuotaModal(${JSON.stringify(c).replace(/'/g,"&#39;")})' style="background:var(--card);border-radius:10px;padding:.75rem .9rem;margin-bottom:.5rem;cursor:pointer;" title="Tocá para editar o borrar">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+          <span style="font-weight:600;font-size:13px;color:var(--text);">${getCategoryIcon(c.categoria)} ${c.concepto} ✎</span>
+          <span style="font-size:11.5px;color:var(--text2);">${pagadas}/${totales} cuotas</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:.4rem;">
+          <div style="height:100%;width:${pct}%;background:var(--green);border-radius:999px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text2);">$${montoCuota.toLocaleString('es-AR')}/mes</span>
+          <span style="font-weight:600;color:var(--text);">Quedan $${montoRestante.toLocaleString('es-AR')}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg3);border-radius:14px;padding:1rem;margin-bottom:.85rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <span style="font-weight:700;font-size:14px;color:var(--text);">${getCardIcon(tarjeta)} ${tarjeta}</span>
+        <span style="font-size:12px;color:var(--text2);">Quedan $${totalPendiente.toLocaleString('es-AR')}</span>
       </div>
-      <div style="height:5px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:.5rem;">
-        <div style="height:100%;width:${pct}%;background:var(--green);border-radius:999px;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12.5px;">
-        <span style="color:var(--text2);">$${montoCuota.toLocaleString('es-AR')}/mes</span>
-        <span style="font-weight:600;color:var(--text);">Quedan $${montoRestante.toLocaleString('es-AR')}</span>
-      </div>
+      ${itemsHtml}
     </div>`;
   }).join('');
 }
@@ -1248,6 +1298,15 @@ function openEditMovementModal(subcat,concepto,monto,isHormiga){
   document.getElementById('ei-title').textContent=concepto;
   document.getElementById('ei-monto').value=monto;
   document.getElementById('ei-error').style.display='none';
+  document.getElementById('ei-nueva-categoria-otra').value='';
+  // Armar la lista de categorias existentes (fijas + hormiga) para poder mover el gasto entre ellas
+  const sel=document.getElementById('ei-nueva-categoria');
+  const fijasKeys=Object.keys(finState.categorias||{});
+  const hormigaKeys=Object.keys(finState.gastosHormiga||{});
+  let html=`<option value="${eiCurrent.section}|${jsStr(subcat)}">${subcat} (donde está ahora)</option>`;
+  if(fijasKeys.length){html+=`<optgroup label="📌 Gastos fijos">`+fijasKeys.filter(k=>!(eiCurrent.section==='categorias'&&k===subcat)).map(k=>`<option value="categorias|${jsStr(k)}">${k}</option>`).join('')+`</optgroup>`;}
+  if(hormigaKeys.length){html+=`<optgroup label="🐜 Gastos hormiga">`+hormigaKeys.filter(k=>!(eiCurrent.section==='gastosHormiga'&&k===subcat)).map(k=>`<option value="gastosHormiga|${jsStr(k)}">${k}</option>`).join('')+`</optgroup>`;}
+  sel.innerHTML=html;
   openModal('modal-edit-item');
 }
 async function saveEditItem(){
@@ -1258,9 +1317,16 @@ async function saveEditItem(){
   errEl.style.display='none';
   const btn=document.getElementById('ei-save-btn');
   btn.disabled=true;btn.textContent='Guardando...';
+  const otra=document.getElementById('ei-nueva-categoria-otra').value.trim();
+  let nuevaSeccion=eiCurrent.section, nuevaSubcategoria=eiCurrent.subcategoria;
+  if(otra){ nuevaSubcategoria=otra; } // si escribio una categoria nueva, se queda en la misma seccion (fijo/hormiga)
+  else {
+    const [sec,subcat]=document.getElementById('ei-nueva-categoria').value.split('|');
+    nuevaSeccion=sec; nuevaSubcategoria=subcat;
+  }
   try{
     const res=await fetch('/api/edit-item',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...eiCurrent,monto})});
+      body:JSON.stringify({...eiCurrent,monto,nuevaSeccion,nuevaSubcategoria})});
     const data=await res.json();
     if(data.ok){applyFinUpdate(data.financialData);closeModal('modal-edit-item');}
     else{errEl.textContent=data.error||'No se pudo guardar.';errEl.style.display='block';}
@@ -1282,16 +1348,37 @@ async function deleteEditItem(){
   btn.disabled=false;btn.textContent='Eliminar';
 }
 
+let cuEditingOriginal=null; // concepto original si estamos editando una cuota existente, null si es alta
 function openAddCuotaModal(){
+  cuEditingOriginal=null;
+  document.getElementById('cu-modal-title').textContent='Agregar compra en cuotas';
   document.getElementById('cu-concepto').value='';
+  document.getElementById('cu-tarjeta').value='';
+  document.getElementById('cu-categoria').value='';
   document.getElementById('cu-monto').value='';
   document.getElementById('cu-totales').value='';
   document.getElementById('cu-pagadas').value='';
   document.getElementById('cu-error').style.display='none';
+  document.getElementById('cu-delete-btn').style.display='none';
+  openModal('modal-cuota');
+}
+function openEditCuotaModal(c){
+  cuEditingOriginal=c.concepto;
+  document.getElementById('cu-modal-title').textContent='Editar cuota';
+  document.getElementById('cu-concepto').value=c.concepto||'';
+  document.getElementById('cu-tarjeta').value=c.tarjeta||'';
+  document.getElementById('cu-categoria').value=c.categoria||'';
+  document.getElementById('cu-monto').value=c.montoCuota||'';
+  document.getElementById('cu-totales').value=c.cuotasTotales||'';
+  document.getElementById('cu-pagadas').value=c.cuotasPagadas||0;
+  document.getElementById('cu-error').style.display='none';
+  document.getElementById('cu-delete-btn').style.display='block';
   openModal('modal-cuota');
 }
 async function submitCuota(){
   const concepto=document.getElementById('cu-concepto').value.trim();
+  const tarjeta=document.getElementById('cu-tarjeta').value.trim();
+  const categoria=document.getElementById('cu-categoria').value.trim();
   const montoCuota=parseFloat(document.getElementById('cu-monto').value);
   const cuotasTotales=parseInt(document.getElementById('cu-totales').value);
   const cuotasPagadas=parseInt(document.getElementById('cu-pagadas').value)||0;
@@ -1305,8 +1392,11 @@ async function submitCuota(){
   const btn=document.getElementById('cu-submit-btn');
   btn.disabled=true;btn.textContent='Guardando...';
   try{
-    const res=await fetch('/api/add-cuota',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({concepto,montoCuota,cuotasTotales,cuotasPagadas})});
+    const url=cuEditingOriginal?'/api/edit-cuota':'/api/add-cuota';
+    const body=cuEditingOriginal
+      ?{conceptoOriginal:cuEditingOriginal,concepto,tarjeta,categoria,montoCuota,cuotasTotales,cuotasPagadas}
+      :{concepto,tarjeta,categoria,montoCuota,cuotasTotales,cuotasPagadas};
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     if(data.ok){
       applyFinUpdate(data.financialData);
@@ -1321,13 +1411,36 @@ async function submitCuota(){
   }
   btn.disabled=false;btn.textContent='Guardar cuota';
 }
+async function deleteCuota(){
+  if(!cuEditingOriginal)return;
+  if(!confirm(`¿Borrar "${cuEditingOriginal}" de tus cuotas?`))return;
+  const btn=document.getElementById('cu-delete-btn');
+  btn.disabled=true;btn.textContent='Borrando...';
+  try{
+    const res=await fetch('/api/edit-cuota',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({conceptoOriginal:cuEditingOriginal,eliminar:true})});
+    const data=await res.json();
+    if(data.ok){applyFinUpdate(data.financialData);closeModal('modal-cuota');}
+    else{document.getElementById('cu-error').textContent=data.error||'No se pudo borrar.';document.getElementById('cu-error').style.display='block';}
+  }catch(e){document.getElementById('cu-error').textContent='Error de conexión.';document.getElementById('cu-error').style.display='block';}
+  btn.disabled=false;btn.textContent='Eliminar';
+}
 
 // ===== TASA DE AHORRO Y COMPARACION MES A MES =====
-function updateSavingsRateCard(ingresos,egresos,forPeriod){
+function updateSavingsRateCard(ingresos,egresos,forPeriod,ahorroDeclarado){
   const wrap=document.getElementById('fin-savings-wrap');
   if(!wrap||!ingresos)return;
-  const rate=Math.round(((ingresos-egresos)/ingresos)*100);
+  // Prioridad: 1) lo que el usuario aclaro explicitamente en la charla de finanzas,
+  // 2) el capital mensual que definio al armar su objetivo de inversion,
+  // 3) recien como ultimo recurso, un estimado en base al balance (ingresos-egresos), que puede
+  // estar inflado si hay gastos sin declarar todavia.
+  const ahorroMonto = (ahorroDeclarado!=null) ? ahorroDeclarado : (uCapMensual!=null ? uCapMensual : null);
+  const esEstimado = ahorroMonto==null;
+  const rate = esEstimado ? Math.round(((ingresos-egresos)/ingresos)*100) : Math.round((ahorroMonto/ingresos)*100);
   document.getElementById('fin-savings-rate').textContent=rate+'%';
+  document.getElementById('fin-savings-note').textContent = esEstimado
+    ? '(estimado por balance, puede no incluir todos tus gastos)'
+    : `(según lo que confirmaste: $${Math.round(ahorroMonto).toLocaleString('es-AR')}/mes)`;
   wrap.style.display='block';
   const cmp=document.getElementById('fin-savings-compare');
   if(finHistory && finHistory.length>=2){
@@ -1600,7 +1713,7 @@ async function restart(){
   document.getElementById('chat-messages').innerHTML='';document.getElementById('demo-limit-box').style.display='none';
   document.getElementById('profile-section').style.display='block';document.getElementById('context-bar').style.display='none';
   document.getElementById('restart-bar').style.display='block';document.getElementById('tab-bar').style.display='none';
-  document.getElementById('tab-goal-btn').style.display='none';document.getElementById('tab-fin-btn').style.display='none';
+  document.getElementById('tab-goal-btn').style.display='none';document.getElementById('tab-fin-btn').style.display='none';document.getElementById('tab-cuotas-btn').style.display='none';
   hideChatInput();loadUser();
 }
 
