@@ -7,6 +7,7 @@ app = Flask(__name__, static_folder='public')
 app.secret_key = os.environ.get('SESSION_SECRET', 'invertia-dev-secret-2026')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = '/tmp/flask_sessions'
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB, cubre imagenes en base64 (~33% mas pesadas que el original)
 os.makedirs('/tmp/flask_sessions', exist_ok=True)
 Session(app)
 
@@ -43,6 +44,7 @@ def init_db():
             objetivo_plazo_deseado_meses INTEGER,
             capital_mensual REAL,
             objetivo_retorno_anual REAL,
+            objetivo_ahorrado_actual REAL,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
@@ -60,6 +62,7 @@ def init_db():
             ingresos REAL DEFAULT 0,
             egresos REAL DEFAULT 0,
             categorias TEXT,
+            gastos_hormiga TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
@@ -74,8 +77,11 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     ''')
-    for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL']:
+    for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
+        except: pass
+    for col in ['gastos_hormiga TEXT']:
+        try: conn.execute(f'ALTER TABLE financial_data ADD COLUMN {col}')
         except: pass
     conn.commit()
     conn.close()
@@ -210,9 +216,12 @@ def me():
             'objetivoMonto':prof['objetivo_monto'],'objetivoPlazoMeses':prof['objetivo_plazo_meses'],
             'objetivoPlazoDeseadoMeses':prof['objetivo_plazo_deseado_meses'],'capitalMensual':prof['capital_mensual'],
             'objetivoRetornoAnual':prof['objetivo_retorno_anual'],
+            'objetivoAhorradoActual':prof['objetivo_ahorrado_actual'],
         }
     if fin:
-        result['financialData'] = {'ingresos':fin['ingresos'],'egresos':fin['egresos'],'categorias':json.loads(fin['categorias']) if fin['categorias'] else {}}
+        result['financialData'] = {'ingresos':fin['ingresos'],'egresos':fin['egresos'],
+            'categorias':json.loads(fin['categorias']) if fin['categorias'] else {},
+            'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {}}
     result['payments'] = [dict(p) for p in pmts]
     result['daysSinceLastVisit'] = days_since(user['id'])
     return jsonify(result)
@@ -336,11 +345,11 @@ NO uses ---CHART--- cuando:
 
 FORMATO cuando corresponde:
 ---CHART---
-{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":25,"description":"Bolsa argentina","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":30,"description":"Renta fija en dolares","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":60000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":294,"retornoAnualEstimado":8}}
+{"instruments":[{"name":"CEDEARs S&P500","pct":45,"description":"Acciones tech via CEDEAR","trend":"up","trendNote":"+12% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1120,1254,1405,1574,1763]},{"name":"Acciones AR","pct":25,"description":"Bolsa argentina","trend":"up","trendNote":"+15% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1150,1322,1521,1749,2011]},{"name":"Bonos USD","pct":30,"description":"Renta fija en dolares","trend":"up","trendNote":"+7% anual","labels":["2026","2027","2028","2029","2030","2031"],"data":[1000,1070,1145,1225,1311,1403]}],"objetivoUpdate":{"monto":60000,"plazoMeses":180,"plazoDeseadoMeses":180,"capitalMensual":294,"retornoAnualEstimado":8,"ahorradoActual":5000}}
 
 Cuando el mensaje sea sobre control financiero (plan Advanced), el bloque puede llevar SOLO financialUpdate, sin instruments ni objetivoUpdate:
 ---CHART---
-{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Alquiler":250000,"Comida":150000,"Transporte":80000,"Otros":70000}}}
+{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Alquiler":250000,"Servicios":60000,"Seguro":20000},"gastosHormiga":{"Cafeterias":18000,"Delivery":45000,"Suscripciones":12000}}}
 
 REGLAS del JSON:
 - pct suma exactamente 100
@@ -352,9 +361,12 @@ REGLAS del JSON:
   alcanzan la meta. El frontend lo usa para proyectar con interes compuesto, asi que tiene que ser el MISMO numero
   que usaste vos internamente al calcular el plazo o el monto (no un numero aleatorio o distinto). Para una cartera
   conservadora tipicamente ronda 5-7%, moderada 7-9%, arriesgada 9-13% anual, pero usa el numero real que calculaste.
-- financialUpdate: incluir (plan Advanced) apenas el usuario te de ingresos y/o egresos mensuales. Numeros en pesos
-  argentinos, sin puntos de miles ni simbolo $ (ej: 800000, no "800.000" ni "$800.000"). categorias es opcional: un
-  objeto nombre->monto con sus gastos principales, si los tenes.
+- ahorradoActual: cuanto tiene el usuario YA ahorrado/invertido para ese objetivo especificamente, segun lo que el
+  mismo te dijo (no es una proyeccion tuya). Poné 0 si te dijo que arranca de cero. Es un monto en USD.
+- financialUpdate: incluir (plan Advanced) apenas el usuario te de ingresos y/o egresos. Numeros en pesos argentinos,
+  sin puntos de miles ni simbolo $ (ej: 800000, no "800.000"). categorias = gastos FIJOS grandes (nombre->monto).
+  gastosHormiga = gastos chicos y frecuentes (nombre->monto), por separado de categorias. Ambos objetos opcionales
+  pero recomendados.
 =====
 """
 
@@ -400,14 +412,25 @@ def chat():
         + ("IMPORTANTE: objetivo de alto valor, siempre en USD.\n" if high_ticket else "")
         + ("\n===== CONTROL FINANCIERO (plan Advanced) =====\n"
            "Cuando el usuario pida ayuda para organizar sus finanzas, armar un presupuesto, o entender en que gasta:\n"
-           "1. En un PRIMER mensaje, preguntale concretamente (no preguntas genericas de deudas/fondo de emergencia "
-           "salvo que el ya haya dado ingresos y egresos): '¿Cuáles son tus ingresos mensuales totales? ¿Y cuánto "
-           "gastás en total por mes?'\n"
-           "2. En cuanto tengas ingresos Y egresos (aunque sean aproximados), en ESE MISMO mensaje incluí un bloque "
-           "---CHART--- con un financialUpdate en el JSON (formato mas abajo) para que se actualice su panel financiero, "
-           "junto con un analisis breve en texto (esta gastando mas de lo que gana, tiene margen para invertir mas, etc).\n"
-           "3. Despues podes pedir que desglose los egresos por categoria (alquiler, comida, transporte, servicios, ocio) "
-           "para refinar el financialUpdate con categorias.\n"
+           "1. Hacé las preguntas necesarias para armar el panel completo (podes ir de a poco en mensajes sucesivos, "
+           "pero no repitas preguntas sobre datos que ya tenes en el contexto de la conversacion):\n"
+           "   - Ingresos mensuales totales\n"
+           "   - Egresos mensuales totales\n"
+           "   - Gastos FIJOS grandes y recurrentes (alquiler/hipoteca, servicios, seguros, cuotas, prepaga, etc)\n"
+           "   - Gastos HORMIGA: gastos chicos y frecuentes que suelen pasar desapercibidos pero suman (cafes, "
+           "delivery, apps de comida, suscripciones de streaming, salidas, taxis/uber). Preguntaselos especificamente "
+           "si el usuario no los menciono solo.\n"
+           "2. En cuanto tengas ingresos y egresos (con o sin desglose todavia), en ESE MISMO mensaje dale tu analisis "
+           "concreto en texto: si esta gastando mas de lo que gana, cuanto margen real tiene para invertir, en que "
+           "rubro parece concentrarse el gasto hormiga. Se especifico con numeros, nunca generico.\n"
+           "3. En ESE MISMO mensaje, decile que puede ver el detalle completo (ingresos, egresos, gastos fijos y "
+           "gastos hormiga por separado) en su panel financiero, en la pestaña de arriba.\n"
+           "4. En ESE MISMO mensaje incluí el bloque ---CHART--- con financialUpdate en el JSON (formato mas abajo), "
+           "separando categorias (gastos fijos) de gastosHormiga.\n"
+           "5. Si despues el usuario da mas detalle o corrige algo, mandá un financialUpdate actualizado.\n"
+           "Si el usuario adjunta una imagen (captura de un resumen de gastos, estado de cuenta, ticket, etc), "
+           "analizala vos mismo y extraé los montos y categorias relevantes para el financialUpdate, sin pedirle "
+           "que te los tipee de nuevo.\n"
            "==========\n" if is_advanced else
            "Plan Pro: si pregunta por control financiero/gastos/presupuesto/organizar sus finanzas, decile en ese mismo "
            "mensaje que ese panel es parte del plan Advanced, sin hacerle las preguntas de ingresos/egresos.\n")
@@ -438,6 +461,9 @@ def chat():
         "   - Auto: 'Un auto generalmente se planifica entre 1 y 3 anos. ¿Cuando lo querias tener?'\n"
         "   - Viaje: 'Un viaje suele planificarse entre 6 meses y 2 anos. ¿Cuando lo tenias pensado?'\n"
         "   - Retiro: 'El retiro suele planificarse a 10-30 anos. ¿En que horizonte estas pensando?'\n"
+        "   Ademas, si todavia no sabes cuanto tiene ya ahorrado/invertido para ese objetivo especificamente, "
+        "preguntaselo tambien (puede ser en el mismo mensaje o en el siguiente turno): '¿Ya tenés algo ahorrado o "
+        "invertido para esto, o arrancás de cero?'. Guardalo como ahorradoActual en el JSON (0 si arranca de cero).\n"
         "2. Cuando tenes capital + objetivo + plazo → en ese MISMO mensaje calculá si es realista ASUMIENDO que el "
         "capital se invierte (no que se guarda sin rendimiento): definí un % de retorno anual razonable segun el perfil "
         "y la mezcla de instrumentos, calculá con esa tasa (interes compuesto, no suma simple) si el monto final "
@@ -454,7 +480,17 @@ def chat():
     )
 
     msgs = [{'role':h['role'],'content':h['content']} for h in history if h.get('role') and h.get('content')]
-    msgs.append({'role':'user','content':message})
+
+    image = d.get('image') or {}
+    image_data, image_media_type = image.get('data'), image.get('mediaType')
+    if image_data and image_media_type:
+        block_type = 'document' if image_media_type == 'application/pdf' else 'image'
+        msgs.append({'role':'user','content':[
+            {'type':block_type,'source':{'type':'base64','media_type':image_media_type,'data':image_data}},
+            {'type':'text','text':message or '(el usuario adjunto un archivo sin agregar texto, analizalo igual)'}
+        ]})
+    else:
+        msgs.append({'role':'user','content':message})
 
     try:
         result = call_claude(msgs,system,model='claude-sonnet-4-6',max_tokens=4000,tools=WEB_SEARCH_TOOLS)
@@ -478,24 +514,27 @@ def chat():
                 print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300])
 
         if obj_update:
-            conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,objetivo_retorno_anual,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
+            conn.execute('''INSERT INTO user_profile (user_id,profile_key,profile_label,scores,capital,objetivo,objetivo_monto,objetivo_plazo_meses,objetivo_plazo_deseado_meses,capital_mensual,objetivo_retorno_anual,objetivo_ahorrado_actual,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
                 objetivo_monto=COALESCE(excluded.objetivo_monto,objetivo_monto),
                 objetivo_plazo_meses=COALESCE(excluded.objetivo_plazo_meses,objetivo_plazo_meses),
                 objetivo_plazo_deseado_meses=COALESCE(excluded.objetivo_plazo_deseado_meses,objetivo_plazo_deseado_meses),
                 capital_mensual=COALESCE(excluded.capital_mensual,capital_mensual),
-                objetivo_retorno_anual=COALESCE(excluded.objetivo_retorno_anual,objetivo_retorno_anual),updated_at=excluded.updated_at''',
+                objetivo_retorno_anual=COALESCE(excluded.objetivo_retorno_anual,objetivo_retorno_anual),
+                objetivo_ahorrado_actual=COALESCE(excluded.objetivo_ahorrado_actual,objetivo_ahorrado_actual),updated_at=excluded.updated_at''',
                 (session['user_id'],profile,profile,json.dumps(scores),capital,objetivo,
                  obj_update.get('monto'),obj_update.get('plazoMeses'),obj_update.get('plazoDeseadoMeses'),
-                 obj_update.get('capitalMensual'),obj_update.get('retornoAnualEstimado'),datetime.now().isoformat()))
+                 obj_update.get('capitalMensual'),obj_update.get('retornoAnualEstimado'),
+                 obj_update.get('ahorradoActual'),datetime.now().isoformat()))
             conn.commit()
 
         if fin_update and is_advanced:
-            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,updated_at) VALUES (?,?,?,?,?)
+            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?)
                 ON CONFLICT(user_id) DO UPDATE SET ingresos=COALESCE(excluded.ingresos,ingresos),
-                egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),updated_at=excluded.updated_at''',
+                egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),
+                gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),updated_at=excluded.updated_at''',
                 (session['user_id'],fin_update.get('ingresos'),fin_update.get('egresos'),
-                 json.dumps(fin_update.get('categorias',{})),datetime.now().isoformat()))
+                 json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),datetime.now().isoformat()))
             conn.commit()
 
         save_msg(session['user_id'],'user',message)
