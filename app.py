@@ -68,6 +68,7 @@ def init_db():
             egresos REAL DEFAULT 0,
             categorias TEXT,
             gastos_hormiga TEXT,
+            cuotas TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
@@ -97,7 +98,7 @@ def init_db():
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
         except: pass
-    for col in ['gastos_hormiga TEXT']:
+    for col in ['gastos_hormiga TEXT','cuotas TEXT']:
         try: conn.execute(f'ALTER TABLE financial_data ADD COLUMN {col}')
         except: pass
     conn.commit()
@@ -238,7 +239,8 @@ def me():
     if fin:
         result['financialData'] = {'ingresos':fin['ingresos'],'egresos':fin['egresos'],
             'categorias':json.loads(fin['categorias']) if fin['categorias'] else {},
-            'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {}}
+            'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {},
+            'cuotas':json.loads(fin['cuotas']) if fin['cuotas'] else []}
     result['payments'] = [dict(p) for p in pmts]
     result['daysSinceLastVisit'] = days_since(user['id'])
     return jsonify(result)
@@ -260,6 +262,134 @@ def save_profile():
          d.get('capital'),d.get('objetivo'),d.get('objetivoMonto'),d.get('objetivoPlazoMeses'),
          d.get('objetivoPlazoDeseadoMeses'),d.get('capitalMensual'),datetime.now().isoformat()))
     conn.commit(); conn.close(); return jsonify({'ok':True})
+
+@app.route('/api/add-movement', methods=['POST'])
+def add_movement():
+    """Atajo manual: cargar un ingreso o gasto puntual sin pasar por el chat con el asesor.
+    Se suma/mergea con lo que ya haya en el panel financiero, respetando el formato de dos niveles
+    (subcategoria -> {concepto: monto})."""
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    user = conn.execute('SELECT plan FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
+    d = request.json or {}
+    tipo = d.get('tipo')  # 'ingreso' | 'gasto'
+    concepto = (d.get('concepto') or '').strip()
+    categoria = (d.get('categoria') or 'Otros').strip() or 'Otros'
+    es_hormiga = bool(d.get('esHormiga'))
+    try:
+        monto = float(d.get('monto') or 0)
+    except (ValueError, TypeError):
+        monto = 0
+    if not concepto or monto <= 0 or tipo not in ('ingreso','gasto'):
+        conn.close(); return jsonify({'ok':False,'error':'Faltan datos (concepto, monto o tipo invalido).'})
+
+    row = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    ingresos = (row['ingresos'] if row and row['ingresos'] else 0) or 0
+    egresos = (row['egresos'] if row and row['egresos'] else 0) or 0
+    categorias = json.loads(row['categorias']) if row and row['categorias'] else {}
+    hormiga = json.loads(row['gastos_hormiga']) if row and row['gastos_hormiga'] else {}
+
+    if tipo == 'ingreso':
+        ingresos += monto
+    else:
+        egresos += monto
+        target = hormiga if es_hormiga else categorias
+        if categoria not in target or not isinstance(target.get(categoria), dict): target[categoria] = {}
+        target[categoria][concepto] = target[categoria].get(concepto, 0) + monto
+
+    conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET ingresos=excluded.ingresos, egresos=excluded.egresos,
+        categorias=excluded.categorias, gastos_hormiga=excluded.gastos_hormiga, updated_at=excluded.updated_at''',
+        (session['user_id'], ingresos, egresos, json.dumps(categorias), json.dumps(hormiga), datetime.now().isoformat()))
+
+    current_period = datetime.now().strftime('%Y-%m')
+    conn.execute('''INSERT INTO financial_snapshots (user_id,period,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?,?)
+        ON CONFLICT(user_id,period) DO UPDATE SET ingresos=excluded.ingresos, egresos=excluded.egresos,
+        categorias=excluded.categorias, gastos_hormiga=excluded.gastos_hormiga, updated_at=excluded.updated_at''',
+        (session['user_id'], current_period, ingresos, egresos, json.dumps(categorias), json.dumps(hormiga), datetime.now().isoformat()))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True,'financialData':{'ingresos':ingresos,'egresos':egresos,'categorias':categorias,'gastosHormiga':hormiga,'cuotas':json.loads(row['cuotas']) if row and row['cuotas'] else []}})
+
+@app.route('/api/edit-item', methods=['POST'])
+def edit_item():
+    """Editar el monto de un gasto puntual del panel, o eliminarlo (si no se manda 'monto').
+    Ajusta egresos por la diferencia para que el total no quede inconsistente."""
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    user = conn.execute('SELECT plan FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
+    d = request.json or {}
+    section = d.get('section')  # 'categorias' | 'gastosHormiga'
+    subcat = (d.get('subcategoria') or '').strip()
+    concepto = (d.get('concepto') or '').strip()
+    nuevo_monto = d.get('monto')  # None/ausente = eliminar el item
+    if section not in ('categorias','gastosHormiga') or not subcat or not concepto:
+        conn.close(); return jsonify({'ok':False,'error':'Datos incompletos.'})
+
+    row = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    if not row: conn.close(); return jsonify({'ok':False,'error':'No hay datos financieros todavia.'})
+    egresos = row['egresos'] or 0
+    categorias = json.loads(row['categorias']) if row['categorias'] else {}
+    hormiga = json.loads(row['gastos_hormiga']) if row['gastos_hormiga'] else {}
+    target = categorias if section == 'categorias' else hormiga
+
+    old_val = 0
+    if subcat in target and isinstance(target.get(subcat), dict) and concepto in target[subcat]:
+        old_val = target[subcat][concepto]
+
+    if nuevo_monto is None:
+        if subcat in target and isinstance(target.get(subcat), dict) and concepto in target[subcat]:
+            del target[subcat][concepto]
+            if not target[subcat]: del target[subcat]
+        egresos = max(0, egresos - old_val)
+    else:
+        try: nuevo_monto = float(nuevo_monto)
+        except (ValueError, TypeError): nuevo_monto = old_val
+        if subcat not in target or not isinstance(target.get(subcat), dict): target[subcat] = {}
+        target[subcat][concepto] = nuevo_monto
+        egresos = max(0, egresos - old_val + nuevo_monto)
+
+    conn.execute('UPDATE financial_data SET egresos=?, categorias=?, gastos_hormiga=?, updated_at=? WHERE user_id=?',
+        (egresos, json.dumps(categorias), json.dumps(hormiga), datetime.now().isoformat(), session['user_id']))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True,'financialData':{'ingresos':row['ingresos'] or 0,'egresos':egresos,'categorias':categorias,'gastosHormiga':hormiga}})
+
+@app.route('/api/add-cuota', methods=['POST'])
+def add_cuota():
+    """Atajo manual: agregar una compra en cuotas sin pasar por el chat."""
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    user = conn.execute('SELECT plan FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
+    d = request.json or {}
+    concepto = (d.get('concepto') or '').strip()
+    try:
+        monto_cuota = float(d.get('montoCuota') or 0)
+        cuotas_totales = int(d.get('cuotasTotales') or 0)
+        cuotas_pagadas = int(d.get('cuotasPagadas') or 0)
+    except (ValueError, TypeError):
+        monto_cuota, cuotas_totales, cuotas_pagadas = 0, 0, 0
+    if not concepto or monto_cuota <= 0 or cuotas_totales <= 0:
+        conn.close(); return jsonify({'ok':False,'error':'Completá concepto, monto por cuota y cantidad de cuotas.'})
+    cuotas_pagadas = max(0, min(cuotas_pagadas, cuotas_totales))
+
+    row = conn.execute('SELECT cuotas FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    cuotas_list = json.loads(row['cuotas']) if row and row['cuotas'] else []
+    cuotas_list = [c for c in cuotas_list if (c.get('concepto') or '').strip().lower() != concepto.lower()]
+    cuotas_list.append({'concepto':concepto,'montoCuota':monto_cuota,'cuotasTotales':cuotas_totales,'cuotasPagadas':cuotas_pagadas})
+
+    conn.execute('''INSERT INTO financial_data (user_id,cuotas,updated_at) VALUES (?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET cuotas=excluded.cuotas, updated_at=excluded.updated_at''',
+        (session['user_id'], json.dumps(cuotas_list), datetime.now().isoformat()))
+    conn.commit()
+    fin = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(session['user_id'],)).fetchone()
+    conn.close()
+    return jsonify({'ok':True,'financialData':{
+        'ingresos':fin['ingresos'] or 0,'egresos':fin['egresos'] or 0,
+        'categorias':json.loads(fin['categorias']) if fin['categorias'] else {},
+        'gastosHormiga':json.loads(fin['gastos_hormiga']) if fin['gastos_hormiga'] else {},
+        'cuotas':cuotas_list}})
 
 @app.route('/api/save-financial', methods=['POST'])
 def save_financial():
@@ -387,6 +517,8 @@ NO uses ---CHART--- cuando:
   "listo", "genial"), sin pedir nada nuevo ni cambiar montos/plazos: respondele con una confirmacion breve en
   texto (ej: "¡Buenísimo! Cualquier duda sobre cómo arrancar con alguno de los instrumentos, avisame.") y NADA MAS,
   nunca reenviando el grafico ni la proyeccion que ya viste antes
+- El usuario te confirma que ya hizo la inversion de este mes ("ya invertí", "ya la hice"): eso actualiza el
+  progreso (objetivoUpdate con ahorradoActual), NUNCA repite el grafico de distribucion de cartera
 - Sea una respuesta corta o conversacional
 
 FORMATO cuando corresponde:
@@ -395,7 +527,7 @@ FORMATO cuando corresponde:
 
 Cuando el mensaje sea sobre control financiero (plan Advanced), el bloque puede llevar SOLO financialUpdate, sin instruments ni objetivoUpdate:
 ---CHART---
-{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Vivienda":{"Alquiler":250000,"ABL":12000,"Expensas":60000},"Impuestos":{"Monotributo":45000},"Alimentacion":{"Supermercado":180000}},"gastosHormiga":{"Comida y delivery":{"Cafeterias":18000,"Delivery":45000},"Suscripciones":{"Streaming":12000}}}}
+{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Vivienda":{"Alquiler":250000,"ABL":12000,"Expensas":60000},"Impuestos":{"Monotributo":45000},"Alimentacion":{"Supermercado":180000}},"gastosHormiga":{"Comida y delivery":{"Cafeterias":18000,"Delivery":45000},"Suscripciones":{"Streaming":12000}},"cuotas":[{"concepto":"Notebook","montoCuota":25000,"cuotasTotales":12,"cuotasPagadas":3},{"concepto":"Viaje a Bariloche","montoCuota":40000,"cuotasTotales":6,"cuotasPagadas":1}]}}
 
 REGLAS del JSON:
 - pct suma exactamente 100
@@ -414,10 +546,15 @@ REGLAS del JSON:
   subcategoria -> {nombre del gasto: monto}. NUNCA pongas un gasto individual suelto directamente en categorias/
   gastosHormiga: siempre agrupalo dentro de una subcategoria (ver reglas de agrupacion y busqueda web mas arriba).
   Ambos objetos opcionales pero recomendados.
+- cuotas: array de objetos, uno por cada compra en cuotas que el usuario te confirme. Cada objeto: concepto (que
+  es), montoCuota (lo que paga por mes, numero), cuotasTotales (cuantas cuotas tiene en total), cuotasPagadas
+  (cuantas ya pago). Igual que el resto: NUNCA inventes una cuota que el usuario no te confirmo, ni le agregues
+  cuotas de ejemplo.
 =====
 """
 
 _dolar_mep_cache = {'rate': None, 'fetched_at': 0}
+_last_portfolio_signature = {}  # user_id -> firma de la ultima cartera (nombre+pct) ya mostrada en esta corrida
 
 def get_dolar_mep():
     """Devuelve la cotizacion del dolar MEP actual. Se cachea 1 hora para no pegarle a la API
@@ -489,11 +626,21 @@ def chat():
            "   - Gastos HORMIGA: gastos chicos y frecuentes que suelen pasar desapercibidos pero suman (cafes, "
            "delivery, apps de comida, suscripciones de streaming, salidas, taxis/uber). Preguntaselos especificamente "
            "si el usuario no los menciono solo.\n"
+           "   - CUOTAS: en algun momento de esta primera charla (no hace falta que sea la primera pregunta), "
+           "ofrecele armar el seguimiento de cuotas: algo como '¿Sabías que si me contás en qué estás pagando en "
+           "cuotas (qué es, cuánto pagás por mes, cuántas cuotas en total y cuántas ya pagaste) te puedo mostrar "
+           "cuánto te queda pendiente de cada una?'. Si acepta, pedile esos 4 datos por cada cuota.\n"
            "2. En cuanto tengas ingresos y egresos (con o sin desglose todavia), en ESE MISMO mensaje dale tu analisis "
            "concreto en texto: si esta gastando mas de lo que gana, cuanto margen real tiene para invertir, en que "
-           "rubro parece concentrarse el gasto hormiga. Se especifico con numeros, nunca generico.\n"
+           "rubro parece concentrarse el gasto hormiga. Se especifico con numeros, nunca generico. IMPORTANTE: si "
+           "todavia no tenes el desglose completo de en que se va la plata (solo tenes el total de egresos, sin "
+           "categorias), NO le digas que 'todo lo que sobra es ahorro' — aclarale que el balance (ingresos menos "
+           "egresos declarados) no es necesariamente ahorro, porque probablemente incluye gastos que todavia no "
+           "contamos (salidas, gastos sueltos, etc). Sugerile que te cuente el desglose para que el numero sea mas real.\n"
            "3. En ESE MISMO mensaje, decile que puede ver el detalle completo (ingresos, egresos, gastos fijos y "
-           "gastos hormiga por separado) en su panel financiero, en la pestaña de arriba.\n"
+           "gastos hormiga por separado) en su panel financiero, en la pestaña de arriba, y aclarale que ese panel "
+           "se arma en base a lo que el mismo te va contando — si algo esta mal o incompleto, puede corregirlo el "
+           "mismo tocando cualquier gasto del panel, o contartelo a vos para que lo actualices.\n"
            "4. En ESE MISMO mensaje incluí el bloque ---CHART--- con financialUpdate en el JSON (formato mas abajo), "
            "separando categorias (gastos fijos) de gastosHormiga.\n"
            "5. Si despues el usuario da mas detalle o corrige algo, mandá un financialUpdate actualizado.\n"
@@ -605,6 +752,11 @@ def chat():
         "5. Si el usuario pide 'mas detalle' o nombres especificos de instrumentos ya presentados → buscá en la web si "
         "hace falta, y en ese MISMO mensaje dá el detalle concreto (nombres reales, tickers, como se compran, por que "
         "encajan) EN TEXTO, sin volver a incluir el bloque ---CHART--- (la cartera y el grafico ya se mostraron antes).\n"
+        "5.5. Si el usuario te confirma que YA HIZO la inversion de este mes (frases como 'ya hice la inversión', "
+        "'ya invertí', 'listo, la hice', 'ya la deposité'), esto es una actualizacion de PROGRESO, no una nueva "
+        "cartera. En ese MISMO mensaje: sumá ese aporte al ahorradoActual que ya tenias (mandalo en objetivoUpdate "
+        "con el bloque ---CHART---, SOLO con objetivoUpdate, sin instruments), confirmale en texto cuanto lleva "
+        "acumulado ahora, y NO reenvies el grafico de distribucion de cartera — eso ya se mostro antes y no cambio.\n"
         "6. Despues de presentar la cartera → siempre cerrar con UNA pregunta concreta: '¿Tenés alguna duda sobre la "
         "distribución o cómo empezar?'\n"
         "   - Si en el siguiente turno el usuario tiene una duda concreta → respondela en texto, SIN repetir el grafico.\n"
@@ -656,6 +808,14 @@ def chat():
                 instruments = parsed.get('instruments',[])
                 obj_update = parsed.get('objetivoUpdate')
                 fin_update = parsed.get('financialUpdate')
+                # Freno de codigo (no depende de que el modelo "se acuerde"): si esta cartera
+                # (mismos nombres+porcentajes) ya se mostro antes en esta sesion, no la repitas.
+                sig = tuple(sorted((i.get('name'),i.get('pct')) for i in instruments if i.get('pct',0) and i.get('pct',0)>0))
+                if sig:
+                    if _last_portfolio_signature.get(session['user_id']) == sig:
+                        instruments = []
+                    else:
+                        _last_portfolio_signature[session['user_id']] = sig
             else:
                 print('Chart JSON parse error: no se encontro un JSON balanceado. Raw:', js_raw[:300])
 
@@ -675,12 +835,15 @@ def chat():
             conn.commit()
 
         if fin_update and is_advanced:
-            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?)
+            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,cuotas,updated_at) VALUES (?,?,?,?,?,?,?)
                 ON CONFLICT(user_id) DO UPDATE SET ingresos=COALESCE(excluded.ingresos,ingresos),
                 egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),
-                gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),updated_at=excluded.updated_at''',
+                gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),
+                cuotas=COALESCE(excluded.cuotas,cuotas),updated_at=excluded.updated_at''',
                 (session['user_id'],fin_update.get('ingresos'),fin_update.get('egresos'),
-                 json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),datetime.now().isoformat()))
+                 json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),
+                 json.dumps(fin_update.get('cuotas')) if fin_update.get('cuotas') is not None else None,
+                 datetime.now().isoformat()))
             # Snapshot del mes actual, para poder ver la evolucion mes a mes en el historial
             current_period = datetime.now().strftime('%Y-%m')
             conn.execute('''INSERT INTO financial_snapshots (user_id,period,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?,?)
@@ -705,6 +868,7 @@ def reset_profile():
     conn.execute('DELETE FROM user_profile WHERE user_id=?',(session['user_id'],))
     conn.execute('DELETE FROM chat_messages WHERE user_id=?',(session['user_id'],))
     conn.commit(); conn.close()
+    _last_portfolio_signature.pop(session['user_id'], None)
     return jsonify({'ok':True})
 
 @app.route('/api/clear-chat', methods=['POST'])
