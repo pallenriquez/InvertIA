@@ -1,10 +1,14 @@
 from flask import Flask, request, session, jsonify, send_from_directory, redirect
 from flask_session import Session
-import sqlite3, bcrypt, requests, os, json, re
+import sqlite3, bcrypt, requests, os, json, re, secrets
 from datetime import datetime
 
 app = Flask(__name__, static_folder='public')
-app.secret_key = os.environ.get('SESSION_SECRET', 'invertia-dev-secret-2026')
+# CRITICO: nunca usar una clave fija como fallback. Si no hay SESSION_SECRET configurada,
+# se genera una aleatoria en cada arranque. Esto invalida automaticamente cualquier cookie
+# de sesion vieja despues de un reinicio/redeploy, evitando que se "pegue" a otra cuenta
+# si la base de datos se reseteo y los IDs de usuario volvieron a empezar desde 1.
+app.secret_key = os.environ.get('SESSION_SECRET') or secrets.token_hex(32)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = '/tmp/flask_sessions'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB, cubre imagenes en base64 (~33% mas pesadas que el original)
@@ -66,6 +70,18 @@ def init_db():
             gastos_hormiga TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+        CREATE TABLE IF NOT EXISTS financial_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            period TEXT,
+            ingresos REAL DEFAULT 0,
+            egresos REAL DEFAULT 0,
+            categorias TEXT,
+            gastos_hormiga TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            UNIQUE(user_id, period)
         );
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -258,6 +274,31 @@ def save_financial():
         (session['user_id'],d.get('ingresos'),d.get('egresos'),json.dumps(d.get('categorias',{})),datetime.now().isoformat()))
     conn.commit(); conn.close(); return jsonify({'ok':True})
 
+MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+@app.route('/api/financial-history')
+def financial_history():
+    if not session.get('user_id'): return jsonify({'ok':False})
+    conn = get_db()
+    user = conn.execute('SELECT plan FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    if not user or user['plan'] != 'advanced': conn.close(); return jsonify({'ok':False,'error':'Requiere plan Advanced'})
+    rows = conn.execute('SELECT * FROM financial_snapshots WHERE user_id=? ORDER BY period ASC',(session['user_id'],)).fetchall()
+    conn.close()
+    periods = []
+    for r in rows:
+        ingresos, egresos = r['ingresos'] or 0, r['egresos'] or 0
+        savings_rate = round(((ingresos-egresos)/ingresos)*100) if ingresos else None
+        y, m = r['period'].split('-')
+        periods.append({
+            'period': r['period'],
+            'periodLabel': f"{MESES_ES[int(m)-1].capitalize()} {y}",
+            'ingresos': ingresos, 'egresos': egresos,
+            'categorias': json.loads(r['categorias']) if r['categorias'] else {},
+            'gastosHormiga': json.loads(r['gastos_hormiga']) if r['gastos_hormiga'] else {},
+            'savingsRate': savings_rate,
+        })
+    return jsonify({'ok':True,'periods':periods})
+
 @app.route('/api/recommend', methods=['POST'])
 def recommend():
     if not session.get('user_id'): return jsonify({'ok':False,'error':'No autenticado.'})
@@ -342,6 +383,10 @@ NO uses ---CHART--- cuando:
 - Estes haciendo preguntas sobre objetivos o capital
 - La cartera ya fue presentada antes en la misma sesion, AUNQUE el usuario pida "mas detalle" de los instrumentos:
   ese detalle va SOLO en texto (nombres concretos, tickers, como comprarlos), sin repetir el grafico de torta
+- El usuario SOLO esta confirmando o aceptando algo que ya viste ("ok", "dale", "perfecto", "arranco con esto",
+  "listo", "genial"), sin pedir nada nuevo ni cambiar montos/plazos: respondele con una confirmacion breve en
+  texto (ej: "¡Buenísimo! Cualquier duda sobre cómo arrancar con alguno de los instrumentos, avisame.") y NADA MAS,
+  nunca reenviando el grafico ni la proyeccion que ya viste antes
 - Sea una respuesta corta o conversacional
 
 FORMATO cuando corresponde:
@@ -350,7 +395,7 @@ FORMATO cuando corresponde:
 
 Cuando el mensaje sea sobre control financiero (plan Advanced), el bloque puede llevar SOLO financialUpdate, sin instruments ni objetivoUpdate:
 ---CHART---
-{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Alquiler":250000,"Servicios":60000,"Seguro":20000},"gastosHormiga":{"Cafeterias":18000,"Delivery":45000,"Suscripciones":12000}}}
+{"financialUpdate":{"ingresos":800000,"egresos":550000,"categorias":{"Vivienda":{"Alquiler":250000,"ABL":12000,"Expensas":60000},"Impuestos":{"Monotributo":45000},"Alimentacion":{"Supermercado":180000}},"gastosHormiga":{"Comida y delivery":{"Cafeterias":18000,"Delivery":45000},"Suscripciones":{"Streaming":12000}}}}
 
 REGLAS del JSON:
 - pct suma exactamente 100
@@ -365,9 +410,10 @@ REGLAS del JSON:
 - ahorradoActual: cuanto tiene el usuario YA ahorrado/invertido para ese objetivo especificamente, segun lo que el
   mismo te dijo (no es una proyeccion tuya). Poné 0 si te dijo que arranca de cero. Es un monto en USD.
 - financialUpdate: incluir (plan Advanced) apenas el usuario te de ingresos y/o egresos. Numeros en pesos argentinos,
-  sin puntos de miles ni simbolo $ (ej: 800000, no "800.000"). categorias = gastos FIJOS grandes (nombre->monto).
-  gastosHormiga = gastos chicos y frecuentes (nombre->monto), por separado de categorias. Ambos objetos opcionales
-  pero recomendados.
+  sin puntos de miles ni simbolo $ (ej: 800000, no "800.000"). categorias y gastosHormiga son objetos de DOS NIVELES:
+  subcategoria -> {nombre del gasto: monto}. NUNCA pongas un gasto individual suelto directamente en categorias/
+  gastosHormiga: siempre agrupalo dentro de una subcategoria (ver reglas de agrupacion y busqueda web mas arriba).
+  Ambos objetos opcionales pero recomendados.
 =====
 """
 
@@ -429,9 +475,18 @@ def chat():
            "4. En ESE MISMO mensaje incluí el bloque ---CHART--- con financialUpdate en el JSON (formato mas abajo), "
            "separando categorias (gastos fijos) de gastosHormiga.\n"
            "5. Si despues el usuario da mas detalle o corrige algo, mandá un financialUpdate actualizado.\n"
+           "AGRUPACION EN SUBCATEGORIAS: no dejes cada gasto suelto. Agrupalos en subcategorias claras y utiles "
+           "(ej: Vivienda, Servicios, Impuestos, Alimentacion, Transporte, Cuidado personal, Entretenimiento, "
+           "Deudas/Tarjetas, Salud, Educacion, Otros). Cada gasto individual va DENTRO de su subcategoria en el JSON "
+           "(ver formato de dos niveles mas abajo).\n"
+           "IDENTIFICAR GASTOS NO CLAROS: si un gasto tiene un nombre que no reconoces con certeza (nombre de banco, "
+           "empresa, comercio local, sigla como 'ABL', 'AySA', 'Edesur', etc), buscalo en la web primero para saber "
+           "que es exactamente (ej: buscar 'que es ABL Argentina') antes de asignarle categoria — muchos de estos son "
+           "impuestos o servicios especificos de Argentina que no deberias adivinar. Si despues de buscar seguis sin "
+           "poder identificarlo con confianza, preguntale al usuario que es ese gasto en vez de inventar una categoria.\n"
            "Si el usuario adjunta una imagen (captura de un resumen de gastos, estado de cuenta, ticket, etc), "
            "analizala vos mismo y extraé los montos y categorias relevantes para el financialUpdate, sin pedirle "
-           "que te los tipee de nuevo.\n"
+           "que te los tipee de nuevo. Los mismos criterios de agrupacion y busqueda aplican a los items que veas ahi.\n"
            "==========\n" if is_advanced else
            "Plan Pro: si pregunta por control financiero/gastos/presupuesto/organizar sus finanzas, decile en ese mismo "
            "mensaje que ese panel es parte del plan Advanced, sin hacerle las preguntas de ingresos/egresos.\n")
@@ -441,6 +496,8 @@ def chat():
         "instrumentos reales que cotizan hoy en Argentina/EEUU para esa categoria, con nombres y tickers concretos\n"
         "- Preguntan por cotizaciones, tasas, riesgo pais, inflacion, o cualquier dato de mercado actual\n"
         "- Vas a presentar o actualizar una cartera y no tenes certeza de que tu informacion de mercado este vigente\n"
+        "- Aparece un gasto con un nombre que no reconoces (banco, empresa, sigla, comercio) y necesitas saber que "
+        "es para categorizarlo bien en el panel financiero\n"
         "NO busques para preguntas conceptuales que ya podes responder bien (que es un CEDEAR, como funciona un bono, etc).\n"
         "==========================\n\n"
         + "Como referencia de base (usala solo si la busqueda web no trae algo mejor): inflacion ~2% mensual, "
@@ -469,8 +526,11 @@ def chat():
         "capital se invierte (no que se guarda sin rendimiento): definí un % de retorno anual razonable segun el perfil "
         "y la mezcla de instrumentos, calculá con esa tasa (interes compuesto, no suma simple) si el monto final "
         "alcanza la meta, y si no alcanza sugerir aumentar inversion O estirar plazo, con cifras concretas.\n"
-        "3. Si acepta aumentar inversion → en ese MISMO mensaje mostrar la proyeccion comparativa completa, con el bloque "
-        "---CHART--- incluyendo data2 en el JSON. No lo pospongas para el siguiente turno.\n"
+        "3. Si acepta un AUMENTO de inversion que vos le propusiste (una cifra nueva y distinta a la que ya tenia) → "
+        "en ese MISMO mensaje mostrar la proyeccion comparativa completa, con el bloque ---CHART--- incluyendo data2 "
+        "en el JSON. No lo pospongas para el siguiente turno. OJO: esto es solo para cuando cambia el numero. Si el "
+        "usuario simplemente confirma seguir con la cartera que ya le mostraste ('ok', 'dale', 'arranco con esto'), "
+        "eso NO es aceptar un aumento — ver regla de confirmaciones simples mas abajo, no repitas nada.\n"
         "4. Cuando alineas expectativas → en ese MISMO mensaje presentar la cartera personalizada completa (nombres, "
         "porcentajes, montos en USD/mes) CON el bloque ---CHART--- obligatorio incluido ahi mismo.\n"
         "5. Si el usuario pide 'mas detalle' o nombres especificos de instrumentos ya presentados → buscá en la web si "
@@ -536,6 +596,14 @@ def chat():
                 gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),updated_at=excluded.updated_at''',
                 (session['user_id'],fin_update.get('ingresos'),fin_update.get('egresos'),
                  json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),datetime.now().isoformat()))
+            # Snapshot del mes actual, para poder ver la evolucion mes a mes en el historial
+            current_period = datetime.now().strftime('%Y-%m')
+            conn.execute('''INSERT INTO financial_snapshots (user_id,period,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(user_id,period) DO UPDATE SET ingresos=COALESCE(excluded.ingresos,ingresos),
+                egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),
+                gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),updated_at=excluded.updated_at''',
+                (session['user_id'],current_period,fin_update.get('ingresos'),fin_update.get('egresos'),
+                 json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),datetime.now().isoformat()))
             conn.commit()
 
         save_msg(session['user_id'],'user',message)
@@ -571,10 +639,15 @@ def returning_greeting():
     conn.close()
     if not prof: return jsonify({'ok':False})
     days = days_since(user['id'])
-    returning = f"Vuelve despues de {days} dias. Preguntale como le fue con sus inversiones y si quiere actualizar el plan." if days and days>=25 else ""
+    ask_update = days and days>=20 and prof['objetivo_monto']
+    returning = (f"Vuelve despues de {days} dias. Necesitamos que confirme cuanto lleva ahorrado/invertido HOY para "
+                 f"su objetivo ('{prof['objetivo']}'), para que el progreso real que le mostramos en la app sea preciso "
+                 f"y no una suposicion nuestra." ) if ask_update else ""
     prompt = (f"Sos el asesor personal de {user['name']}. Voseo. Sin asteriscos.\n"
         f"Perfil: {prof['profile_label']}. Capital: {prof['capital']}. Objetivo: {prof['objetivo']}.\n{returning}\n"
-        f"Dale bienvenida personalizada mencionando algo de su contexto. {'Preguntale como le fue con sus inversiones el ultimo mes.' if days and days>=25 else 'Preguntale en que lo podes ayudar hoy.'} Maximo 2 oraciones.")
+        f"Dale bienvenida personalizada mencionando algo de su contexto. "
+        f"{'Preguntale directamente cuanto lleva ahorrado/invertido hasta hoy para su objetivo, asi le actualizas el progreso real (no le preguntes generalidades, pedile el numero concreto).' if ask_update else 'Preguntale en que lo podes ayudar hoy.'} "
+        f"Maximo 2 oraciones.")
     try:
         result = call_claude([{'role':'user','content':prompt}],'',model='claude-haiku-4-5-20251001',max_tokens=150)
         text = extract_text(result)
