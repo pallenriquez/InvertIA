@@ -495,27 +495,25 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
           <select id="fin-period-select" style="display:none;padding:6px 10px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text);font-size:13px;font-family:'Inter',sans-serif;"></select>
         </div>
 
-        <div id="fin-savings-wrap" style="display:none;background:linear-gradient(135deg,rgba(0,196,140,.1),rgba(0,196,140,.03));border:1px solid rgba(0,196,140,.25);border-radius:14px;padding:1rem;margin-bottom:1rem;text-align:center;">
-          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Tasa de ahorro</div>
-          <div id="fin-savings-rate" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--green);">—</div>
-          <div id="fin-savings-compare" style="font-size:12px;margin-top:4px;"></div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.85rem;margin-bottom:1.75rem;">
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
             <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ingresos</div>
-            <div id="fin-ingresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--green);">—</div>
+            <div id="fin-ingresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--green);">—</div>
           </div>
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
             <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Egresos</div>
-            <div id="fin-egresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#EF4444;">—</div>
+            <div id="fin-egresos-val" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#EF4444;">—</div>
+          </div>
+          <div style="background:var(--purple-light);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Balance</div>
+            <div id="fin-balance-val" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--purple-dark);">—</div>
+          </div>
+          <div id="fin-savings-wrap" style="display:none;background:linear-gradient(135deg,rgba(0,196,140,.14),rgba(0,196,140,.04));border:1px solid rgba(0,196,140,.25);border-radius:14px;padding:1rem;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Tasa de ahorro</div>
+            <div id="fin-savings-rate" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--green);">—</div>
           </div>
         </div>
-
-        <div style="background:var(--purple-light);border-radius:14px;padding:1rem;margin-bottom:1.5rem;text-align:center;">
-          <div style="font-size:11px;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Balance mensual</div>
-          <div id="fin-balance-val" style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--purple-dark);">—</div>
-        </div>
+        <div id="fin-savings-compare" style="font-size:12px;margin:-1.25rem 0 1.5rem;text-align:center;"></div>
 
         <!-- Donut de categorias -->
         <div id="fin-chart-section" style="margin-bottom:1.75rem;display:none;">
@@ -878,12 +876,20 @@ function updateGoalDashboard(){
     document.getElementById('goal-remaining-wrap').style.display='none';
   }
 
-  // Nota secundaria (opcional): a este ritmo de inversion, cuanto tardarias en llegar
+  // Nota secundaria: cuanto tendrias en la fecha meta si TODO sale segun lo planeado —
+  // incluyendo lo que ya confirmaste (creciendo al rendimiento estimado) MAS lo que vas a seguir aportando.
+  // Antes esto ignoraba el monto real ya invertido, lo cual no tenia sentido.
   const etaNote=document.getElementById('goal-eta-note');
   if(uCapMensual&&uObjPlazo){
     const retornoAnual=uObjRetorno||7;
+    const tasaMensual=(retornoAnual/100)/12;
+    const yaConfirmado=uObjAhorrado||0;
+    const fvConfirmado = tasaMensual>0 ? yaConfirmado*Math.pow(1+tasaMensual,uObjPlazo) : yaConfirmado;
+    const fvAportes = tasaMensual>0 ? uCapMensual*((Math.pow(1+tasaMensual,uObjPlazo)-1)/tasaMensual) : uCapMensual*uObjPlazo;
+    const proyeccionFinal = fvConfirmado+fvAportes;
+    const alcanza = uObjMonto ? proyeccionFinal>=uObjMonto : null;
     etaNote.style.display='block';
-    etaNote.textContent=`💡 Proyectado según el mercado: si invertís USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes con un rendimiento estimado de ~${retornoAnual}% anual, llegarías a tu meta en ${formatDuration(uObjPlazo)}. (Esto es una estimación, no reemplaza el número real de arriba.)`;
+    etaNote.textContent=`💡 Proyección a ${formatDuration(uObjPlazo)}: contando lo que ya llevás (USD ${yaConfirmado.toLocaleString('es-AR',{maximumFractionDigits:0})}) más USD ${uCapMensual.toLocaleString('es-AR',{maximumFractionDigits:0})}/mes, con un rendimiento estimado de ~${retornoAnual}% anual, llegarías a unos USD ${proyeccionFinal.toLocaleString('es-AR',{maximumFractionDigits:0})}${uObjMonto?(alcanza?' — alcanza y sobra para tu meta 🎉':' — todavía por debajo de tu meta, capaz conviene ajustar el plan con tu asesor'):''}. (Es una estimación de mercado, no reemplaza el número real de arriba.)`;
   } else {
     etaNote.style.display='none';
   }
@@ -907,6 +913,20 @@ function updateGoalBasic(){
 // ===== FIN DASHBOARD (pestaña Finanzas, solo plan Advanced) =====
 function groupTotal(group){return Object.values(group||{}).reduce((s,v)=>s+(Number(v)||0),0);}
 function isNestedGroup(obj){const vals=Object.values(obj||{});return vals.length>0&&vals.every(v=>typeof v==='object'&&v!==null);}
+const CATEGORY_ICONS={
+  'vivienda':'🏠','alquiler':'🏠','servicios':'💡','impuesto':'🧾','impuestos':'🧾',
+  'alimentacion':'🛒','alimentación':'🛒','comida':'🛒','transporte':'🚌',
+  'salud':'⚕️','cuidado personal':'🧖','educacion':'🎓','educación':'🎓',
+  'entretenimiento':'🎬','ocio':'🎬','deudas':'💳','tarjetas':'💳','deudas y tarjetas':'💳',
+  'suscripciones':'📱','bienestar':'🏋️','deporte':'🏋️','bienestar y deporte':'🏋️',
+  'delivery':'🛵','comida y delivery':'🛵','cafeterias':'☕','cafe':'☕',
+};
+function getCategoryIcon(name){
+  const low=(name||'').toLowerCase();
+  for(const [k,v] of Object.entries(CATEGORY_ICONS)){if(low.includes(k))return v;}
+  return '📂';
+}
+
 function renderGroupedList(containerId,data){
   const el=document.getElementById(containerId);
   const entries=Object.entries(data||{});
@@ -916,11 +936,27 @@ function renderGroupedList(containerId,data){
     el.innerHTML=entries.map(([k,v])=>`<div class="fin-cat-item"><span>${k}</span><span style="font-weight:600;">$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
     return;
   }
+  const grandTotal=entries.reduce((s,[,items])=>s+groupTotal(items),0)||1;
   el.innerHTML=entries.map(([subcat,items])=>{
     const total=groupTotal(items);
-    const itemsHtml=Object.entries(items||{}).map(([k,v])=>`<div class="fin-cat-item" style="padding-left:.75rem;"><span style="color:var(--text2);">${k}</span><span>$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
-    return `<div style="margin-bottom:.5rem;"><div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;color:var(--text);border-bottom:1.5px solid var(--border);"><span>${subcat}</span><span>$${total.toLocaleString('es-AR')}</span></div>${itemsHtml}</div>`;
+    const pct=Math.round((total/grandTotal)*100);
+    const itemsHtml=Object.entries(items||{}).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;color:var(--text2);"><span>${k}</span><span>$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
+    return `<div style="background:var(--bg3);border-radius:12px;padding:.85rem 1rem;margin-bottom:.6rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+        <span style="font-weight:700;font-size:13.5px;color:var(--text);">${getCategoryIcon(subcat)} ${subcat}</span>
+        <span style="font-weight:700;font-size:13.5px;color:var(--text);">$${total.toLocaleString('es-AR')}</span>
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:.5rem;">
+        <div style="height:100%;width:${pct}%;background:var(--purple);border-radius:999px;"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:.3rem;">${itemsHtml}</div>
+    </div>`;
   }).join('');
+}
+
+function filterNonZero(data){
+  if(!isNestedGroup(data)) return Object.fromEntries(Object.entries(data||{}).filter(([,v])=>Number(v)>0));
+  return Object.fromEntries(Object.entries(data||{}).filter(([,items])=>groupTotal(items)>0));
 }
 
 function updateFinPanel(fin){
@@ -934,7 +970,7 @@ function updateFinPanel(fin){
   document.getElementById('fin-egresos-val').textContent=`$${egresos.toLocaleString('es-AR')}`;
   document.getElementById('fin-balance-val').textContent=`$${bal.toLocaleString('es-AR')}`;
 
-  const fijos=fin.categorias||{};
+  const fijos=filterNonZero(fin.categorias||{});
   const fijosKeys=Object.keys(fijos);
   document.getElementById('fin-fijos-section').style.display=fijosKeys.length?'block':'none';
   renderGroupedList('fin-fijos-list',fijos);
@@ -955,7 +991,7 @@ function updateFinPanel(fin){
     chartSection.style.display='none';
   }
 
-  const hormiga=fin.gastosHormiga||{};
+  const hormiga=filterNonZero(fin.gastosHormiga||{});
   const hormigaKeys=Object.keys(hormiga);
   document.getElementById('fin-hormiga-section').style.display=hormigaKeys.length?'block':'none';
   renderGroupedList('fin-hormiga-list',hormiga);
