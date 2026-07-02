@@ -345,6 +345,83 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
   </div>
 </div>
 
+<!-- Add Movement Modal -->
+<div class="modal-overlay" id="modal-movement">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Agregar movimiento</span>
+      <button class="modal-close" onclick="closeModal('modal-movement')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:1rem;">
+        <button id="mv-tipo-gasto" onclick="setMovTipo('gasto')" style="flex:1;padding:.6rem;border:1.5px solid var(--purple);border-radius:10px;background:var(--purple);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">↓ Gasto</button>
+        <button id="mv-tipo-ingreso" onclick="setMovTipo('ingreso')" style="flex:1;padding:.6rem;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">↑ Ingreso</button>
+      </div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Concepto</label>
+      <input type="text" id="mv-concepto" placeholder="Ej: Supermercado, Sueldo..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <div id="mv-categoria-wrap">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Categoría</label>
+        <input type="text" id="mv-categoria" placeholder="Ej: Vivienda, Alimentación..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.6rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text2);margin-bottom:.9rem;cursor:pointer;">
+          <input type="checkbox" id="mv-hormiga" style="width:15px;height:15px;">
+          🐜 Es un gasto hormiga (chico y recurrente)
+        </label>
+      </div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Monto (ARS)</label>
+      <input type="number" id="mv-monto" placeholder="0" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:1.1rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <div id="mv-error" style="display:none;color:#EF4444;font-size:12.5px;margin-bottom:.75rem;"></div>
+      <button onclick="submitMovement()" id="mv-submit-btn" style="width:100%;padding:.8rem;border:none;border-radius:10px;background:var(--purple);color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Guardar movimiento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Cuota Modal -->
+<div class="modal-overlay" id="modal-cuota">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Agregar compra en cuotas</span>
+      <button class="modal-close" onclick="closeModal('modal-cuota')">×</button>
+    </div>
+    <div class="modal-body">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">¿Qué es?</label>
+      <input type="text" id="cu-concepto" placeholder="Ej: Notebook, Viaje a Bariloche..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Monto por cuota (ARS)</label>
+      <input type="number" id="cu-monto" placeholder="0" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Cuotas totales</label>
+          <input type="number" id="cu-totales" placeholder="Ej: 12" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Ya pagadas</label>
+          <input type="number" id="cu-pagadas" placeholder="Ej: 3" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:.9rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+        </div>
+      </div>
+      <div id="cu-error" style="display:none;color:#EF4444;font-size:12.5px;margin-bottom:.75rem;"></div>
+      <button onclick="submitCuota()" id="cu-submit-btn" style="width:100%;padding:.8rem;border:none;border-radius:10px;background:var(--purple);color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Guardar cuota</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal-overlay" id="modal-edit-item">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="ei-title">Editar gasto</span>
+      <button class="modal-close" onclick="closeModal('modal-edit-item')">×</button>
+    </div>
+    <div class="modal-body">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;">Monto (ARS)</label>
+      <input type="number" id="ei-monto" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:1rem;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);">
+      <div id="ei-error" style="display:none;color:#EF4444;font-size:12.5px;margin-bottom:.75rem;"></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="deleteEditItem()" id="ei-delete-btn" style="flex:1;padding:.75rem;border:1.5px solid #EF4444;border-radius:10px;background:transparent;color:#EF4444;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Eliminar</button>
+        <button onclick="saveEditItem()" id="ei-save-btn" style="flex:2;padding:.75rem;border:none;border-radius:10px;background:var(--purple);color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Guardar cambio</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <nav>
   <div class="logo">Invert<span>IA</span></div>
   <div class="nav-right">
@@ -490,10 +567,14 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
     <!-- FIN TAB (solo plan Advanced) -->
     <div id="tab-fin" style="display:none;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;flex-wrap:wrap;gap:.5rem;">
           <h2 style="font-size:20px;font-weight:700;color:var(--text);">💰 Tus finanzas</h2>
-          <select id="fin-period-select" style="display:none;padding:6px 10px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text);font-size:13px;font-family:'Inter',sans-serif;"></select>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <select id="fin-period-select" style="display:none;padding:6px 10px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text);font-size:13px;font-family:'Inter',sans-serif;"></select>
+            <button onclick="openAddMovementModal()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:none;border-radius:9px;background:var(--purple);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Movimiento</button>
+          </div>
         </div>
+        <div id="fin-greeting" style="font-size:13.5px;color:var(--text2);margin-bottom:1.25rem;"></div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.85rem;margin-bottom:1.75rem;">
           <div style="background:var(--bg3);border-radius:14px;padding:1rem;">
@@ -513,7 +594,8 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
             <div id="fin-savings-rate" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--green);">—</div>
           </div>
         </div>
-        <div id="fin-savings-compare" style="font-size:12px;margin:-1.25rem 0 1.5rem;text-align:center;"></div>
+        <div id="fin-savings-compare" style="font-size:12px;margin:-1.25rem 0 .5rem;text-align:center;"></div>
+        <div style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:1.25rem;line-height:1.5;">💡 Este panel se arma con lo que nos vas contando — puede no incluir gastos que todavía no registraste. Tocá cualquier ítem para editarlo o corregirlo.</div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.75rem;align-items:start;">
           <!-- Donut de categorias -->
@@ -522,6 +604,10 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
             <div class="pie-inner">
               <div class="pie-box"><canvas id="fin-donut"></canvas></div>
               <div class="pie-legend" id="fin-donut-legend"></div>
+            </div>
+            <div style="margin-top:1.5rem;">
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.6rem;">📈 Ingresos vs Gastos</div>
+              <div style="height:150px;"><canvas id="fin-bars"></canvas></div>
             </div>
           </div>
 
@@ -545,6 +631,18 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
               <div style="font-size:11px;color:var(--text2);margin-top:.6rem;line-height:1.5;">Gastos chicos y recurrentes que suelen pasar desapercibidos, pero suman.</div>
             </div>
           </div>
+        </div>
+
+        <!-- Cuotas pendientes -->
+        <div id="fin-cuotas-section" style="margin-top:1.75rem;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);">💳 Cuotas pendientes</div>
+            <button onclick="openAddCuotaModal()" style="padding:5px 11px;border:1.5px solid var(--purple);border-radius:8px;background:transparent;color:var(--purple);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Cuota</button>
+          </div>
+          <div id="fin-cuotas-list"></div>
+        </div>
+        <div id="fin-cuotas-empty" style="display:none;margin-top:1.75rem;">
+          <button onclick="openAddCuotaModal()" style="width:100%;padding:.9rem;border:1.5px dashed var(--border);border-radius:12px;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">💳 + Agregar una compra en cuotas</button>
         </div>
 
         <div id="fin-pending" style="color:var(--text2);font-size:14px;margin-top:.5rem;padding:1.5rem;background:var(--bg3);border-radius:12px;line-height:1.6;">
@@ -669,6 +767,19 @@ function switchTab(tab){
 
 // GOAL TOAST
 let goalToastShown = false, finToastShown = false, finHistoryLoaded = false;
+let finState = {ingresos:null, egresos:null, categorias:{}, gastosHormiga:{}, cuotas:[]};
+function applyFinUpdate(newData){
+  // Combina la actualizacion parcial que llega (del chat, o de un atajo manual) con lo que ya
+  // se sabia, en vez de reemplazar todo el panel — asi una actualizacion que solo toca "cuotas"
+  // no borra de la vista los ingresos/categorias que ya estaban cargados, y viceversa.
+  if(!newData) return;
+  if(newData.ingresos!=null) finState.ingresos=newData.ingresos;
+  if(newData.egresos!=null) finState.egresos=newData.egresos;
+  if(newData.categorias!=null) finState.categorias=newData.categorias;
+  if(newData.gastosHormiga!=null) finState.gastosHormiga=newData.gastosHormiga;
+  if(newData.cuotas!=null) finState.cuotas=newData.cuotas;
+  updateFinPanel(finState);
+}
 function showAppToast(title,msg){
   document.getElementById('goal-toast-title').textContent = title;
   document.getElementById('goal-toast-msg').textContent = msg;
@@ -737,6 +848,58 @@ function openUpgradeModal(){
   openModal('modal-upgrade');
 }
 
+// ===== ATAJO: AGREGAR MOVIMIENTO SIN PASAR POR EL CHAT =====
+let mvTipo='gasto';
+function setMovTipo(tipo){
+  mvTipo=tipo;
+  const gastoBtn=document.getElementById('mv-tipo-gasto'), ingresoBtn=document.getElementById('mv-tipo-ingreso');
+  const active='border:1.5px solid var(--purple);background:var(--purple);color:white;';
+  const inactive='border:1.5px solid var(--border);background:var(--card);color:var(--text);';
+  gastoBtn.style.cssText=gastoBtn.style.cssText.replace(/border:[^;]+;background:[^;]+;color:[^;]+;/,tipo==='gasto'?active:inactive);
+  ingresoBtn.style.cssText=ingresoBtn.style.cssText.replace(/border:[^;]+;background:[^;]+;color:[^;]+;/,tipo==='ingreso'?active:inactive);
+  document.getElementById('mv-categoria-wrap').style.display=tipo==='gasto'?'block':'none';
+}
+function openAddMovementModal(){
+  document.getElementById('mv-concepto').value='';
+  document.getElementById('mv-categoria').value='';
+  document.getElementById('mv-monto').value='';
+  document.getElementById('mv-hormiga').checked=false;
+  document.getElementById('mv-error').style.display='none';
+  setMovTipo('gasto');
+  openModal('modal-movement');
+}
+async function submitMovement(){
+  const concepto=document.getElementById('mv-concepto').value.trim();
+  const categoria=document.getElementById('mv-categoria').value.trim();
+  const monto=parseFloat(document.getElementById('mv-monto').value);
+  const esHormiga=document.getElementById('mv-hormiga').checked;
+  const errEl=document.getElementById('mv-error');
+  if(!concepto||!monto||monto<=0||(mvTipo==='gasto'&&!categoria)){
+    errEl.textContent='Completá concepto, monto'+(mvTipo==='gasto'?' y categoría.':'.');
+    errEl.style.display='block';
+    return;
+  }
+  errEl.style.display='none';
+  const btn=document.getElementById('mv-submit-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    const res=await fetch('/api/add-movement',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tipo:mvTipo,concepto,categoria,monto,esHormiga})});
+    const data=await res.json();
+    if(data.ok){
+      applyFinUpdate(data.financialData);
+      closeModal('modal-movement');
+    } else {
+      errEl.textContent=data.error||'No se pudo guardar. Intentá de nuevo.';
+      errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent='Error de conexión. Intentá de nuevo.';
+    errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Guardar movimiento';
+}
+
 async function activatePlan(plan){
   const res=await fetch('/api/activate-paid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})});
   const data=await res.json();
@@ -791,7 +954,7 @@ async function loadUser(){
     rScores=sp.scores||[33,34,33];
     uCapital=sp.capital||'';uObjetivo=sp.objetivo||'';
     uObjMonto=sp.objetivoMonto;uObjPlazo=sp.objetivoPlazoMeses;uCapMensual=sp.capitalMensual;uObjRetorno=sp.objetivoRetornoAnual;uObjAhorrado=sp.objetivoAhorradoActual;
-    if(data.financialData&&userData.plan==='advanced')updateFinPanel(data.financialData);
+    if(data.financialData&&userData.plan==='advanced')applyFinUpdate(data.financialData);
     showReturningUser(data.daysSinceLastVisit);
     return;
   }
@@ -931,7 +1094,9 @@ function getCategoryIcon(name){
   return '📂';
 }
 
-function renderGroupedList(containerId,data){
+function jsStr(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+function renderGroupedList(containerId,data,isHormiga){
   const el=document.getElementById(containerId);
   const entries=Object.entries(data||{});
   if(!entries.length){el.innerHTML='';return;}
@@ -944,7 +1109,9 @@ function renderGroupedList(containerId,data){
   el.innerHTML=entries.map(([subcat,items])=>{
     const total=groupTotal(items);
     const pct=Math.round((total/grandTotal)*100);
-    const itemsHtml=Object.entries(items||{}).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;color:var(--text2);"><span>${k}</span><span>$${(Number(v)||0).toLocaleString('es-AR')}</span></div>`).join('');
+    const itemsHtml=Object.entries(items||{}).map(([k,v])=>`<div onclick="openEditMovementModal('${jsStr(subcat)}','${jsStr(k)}',${Number(v)||0},${isHormiga?'true':'false'})" style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;color:var(--text2);cursor:pointer;" title="Tocá para editar o borrar">
+        <span>${k} ✎</span><span>$${(Number(v)||0).toLocaleString('es-AR')}</span>
+      </div>`).join('');
     return `<div style="background:var(--bg3);border-radius:12px;padding:.85rem 1rem;margin-bottom:.6rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
         <span style="font-weight:700;font-size:13.5px;color:var(--text);">${getCategoryIcon(subcat)} ${subcat}</span>
@@ -963,6 +1130,20 @@ function filterNonZero(data){
   return Object.fromEntries(Object.entries(data||{}).filter(([,items])=>groupTotal(items)>0));
 }
 
+function getFinGreeting(rate){
+  const h=new Date().getHours();
+  const momento=h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches';
+  const nombre=userData?userData.name.split(' ')[0]:'';
+  let comentario='Así viene tu mes.';
+  if(rate!=null){
+    if(rate>=30)comentario='¡Vas muy bien, tu ahorro viene fuerte este mes! 🙌';
+    else if(rate>=10)comentario='Tu ahorro viene en buen camino este mes.';
+    else if(rate>=0)comentario='Este mes el margen viene ajustado, pero positivo.';
+    else comentario='Este mes gastaste más de lo que ingresó — juntos vemos dónde ajustar.';
+  }
+  return `${momento}, ${nombre} 👋 ${comentario}`;
+}
+
 function updateFinPanel(fin){
   if(!fin||(fin.ingresos==null&&fin.egresos==null))return;
   document.getElementById('tab-bar').style.display='block';
@@ -973,11 +1154,21 @@ function updateFinPanel(fin){
   document.getElementById('fin-ingresos-val').textContent=`$${ingresos.toLocaleString('es-AR')}`;
   document.getElementById('fin-egresos-val').textContent=`$${egresos.toLocaleString('es-AR')}`;
   document.getElementById('fin-balance-val').textContent=`$${bal.toLocaleString('es-AR')}`;
+  document.getElementById('fin-greeting').textContent=getFinGreeting(ingresos?Math.round((bal/ingresos)*100):null);
 
   const fijos=filterNonZero(fin.categorias||{});
   const fijosKeys=Object.keys(fijos);
   document.getElementById('fin-fijos-section').style.display=fijosKeys.length?'block':'none';
-  renderGroupedList('fin-fijos-list',fijos);
+  renderGroupedList('fin-fijos-list',fijos,false);
+
+  // Barras Ingresos / Gastos / Balance
+  setTimeout(()=>{
+    const barsCanvas=document.getElementById('fin-bars');
+    if(barsCanvas){
+      if(window._finBarsInstance) window._finBarsInstance.destroy();
+      window._finBarsInstance=new Chart(barsCanvas.getContext('2d'),{type:'bar',data:{labels:['Ingresos','Gastos','Balance'],datasets:[{data:[ingresos,egresos,bal],backgroundColor:['#00C48C','#EF4444','#6C47FF'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'var(--border)'},ticks:{color:'#9CA3AF',font:{size:10},callback:v=>'$'+(v/1000)+'k'}}}}});
+    }
+  },120);
 
   // Donut de categorias (solo si hay subcategorias agrupadas)
   const chartSection=document.getElementById('fin-chart-section');
@@ -998,7 +1189,7 @@ function updateFinPanel(fin){
   const hormiga=filterNonZero(fin.gastosHormiga||{});
   const hormigaKeys=Object.keys(hormiga);
   document.getElementById('fin-hormiga-section').style.display=hormigaKeys.length?'block':'none';
-  renderGroupedList('fin-hormiga-list',hormiga);
+  renderGroupedList('fin-hormiga-list',hormiga,true);
 
   const hormigaTotal=isNestedGroup(hormiga)
     ? hormigaKeys.reduce((s,k)=>s+groupTotal(hormiga[k]),0)
@@ -1013,7 +1204,122 @@ function updateFinPanel(fin){
   }
 
   updateSavingsRateCard(ingresos,egresos,fin.period);
+  renderCuotas(fin.cuotas||[]);
   setTimeout(showFinToast, 600);
+}
+
+function renderCuotas(cuotas){
+  const section=document.getElementById('fin-cuotas-section');
+  const empty=document.getElementById('fin-cuotas-empty');
+  if(!cuotas||!cuotas.length){
+    section.style.display='none';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  section.style.display='block';
+  document.getElementById('fin-cuotas-list').innerHTML=cuotas.map(c=>{
+    const totales=Number(c.cuotasTotales)||0, pagadas=Math.min(Number(c.cuotasPagadas)||0,totales);
+    const restantes=Math.max(0,totales-pagadas);
+    const montoCuota=Number(c.montoCuota)||0;
+    const montoRestante=montoCuota*restantes;
+    const pct=totales?Math.round((pagadas/totales)*100):0;
+    return `<div style="background:var(--bg3);border-radius:12px;padding:.85rem 1rem;margin-bottom:.6rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+        <span style="font-weight:700;font-size:13.5px;color:var(--text);">${c.concepto}</span>
+        <span style="font-size:12px;color:var(--text2);">${pagadas} de ${totales} cuotas</span>
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:.5rem;">
+        <div style="height:100%;width:${pct}%;background:var(--green);border-radius:999px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;">
+        <span style="color:var(--text2);">$${montoCuota.toLocaleString('es-AR')}/mes</span>
+        <span style="font-weight:600;color:var(--text);">Quedan $${montoRestante.toLocaleString('es-AR')}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== ATAJO: AGREGAR CUOTA SIN PASAR POR EL CHAT =====
+// ===== EDITAR O BORRAR UN ITEM PUNTUAL DEL PANEL =====
+let eiCurrent=null; // {section, subcategoria, concepto}
+function openEditMovementModal(subcat,concepto,monto,isHormiga){
+  eiCurrent={section:isHormiga?'gastosHormiga':'categorias',subcategoria:subcat,concepto:concepto};
+  document.getElementById('ei-title').textContent=concepto;
+  document.getElementById('ei-monto').value=monto;
+  document.getElementById('ei-error').style.display='none';
+  openModal('modal-edit-item');
+}
+async function saveEditItem(){
+  if(!eiCurrent)return;
+  const monto=parseFloat(document.getElementById('ei-monto').value);
+  const errEl=document.getElementById('ei-error');
+  if(!monto||monto<=0){errEl.textContent='Ingresá un monto válido.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  const btn=document.getElementById('ei-save-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    const res=await fetch('/api/edit-item',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...eiCurrent,monto})});
+    const data=await res.json();
+    if(data.ok){applyFinUpdate(data.financialData);closeModal('modal-edit-item');}
+    else{errEl.textContent=data.error||'No se pudo guardar.';errEl.style.display='block';}
+  }catch(e){errEl.textContent='Error de conexión.';errEl.style.display='block';}
+  btn.disabled=false;btn.textContent='Guardar cambio';
+}
+async function deleteEditItem(){
+  if(!eiCurrent)return;
+  if(!confirm(`¿Borrar "${eiCurrent.concepto}" del panel?`))return;
+  const btn=document.getElementById('ei-delete-btn');
+  btn.disabled=true;btn.textContent='Borrando...';
+  try{
+    const res=await fetch('/api/edit-item',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({section:eiCurrent.section,subcategoria:eiCurrent.subcategoria,concepto:eiCurrent.concepto})});
+    const data=await res.json();
+    if(data.ok){applyFinUpdate(data.financialData);closeModal('modal-edit-item');}
+    else{document.getElementById('ei-error').textContent=data.error||'No se pudo borrar.';document.getElementById('ei-error').style.display='block';}
+  }catch(e){document.getElementById('ei-error').textContent='Error de conexión.';document.getElementById('ei-error').style.display='block';}
+  btn.disabled=false;btn.textContent='Eliminar';
+}
+
+function openAddCuotaModal(){
+  document.getElementById('cu-concepto').value='';
+  document.getElementById('cu-monto').value='';
+  document.getElementById('cu-totales').value='';
+  document.getElementById('cu-pagadas').value='';
+  document.getElementById('cu-error').style.display='none';
+  openModal('modal-cuota');
+}
+async function submitCuota(){
+  const concepto=document.getElementById('cu-concepto').value.trim();
+  const montoCuota=parseFloat(document.getElementById('cu-monto').value);
+  const cuotasTotales=parseInt(document.getElementById('cu-totales').value);
+  const cuotasPagadas=parseInt(document.getElementById('cu-pagadas').value)||0;
+  const errEl=document.getElementById('cu-error');
+  if(!concepto||!montoCuota||montoCuota<=0||!cuotasTotales||cuotasTotales<=0){
+    errEl.textContent='Completá qué es, el monto por cuota y la cantidad de cuotas.';
+    errEl.style.display='block';
+    return;
+  }
+  errEl.style.display='none';
+  const btn=document.getElementById('cu-submit-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    const res=await fetch('/api/add-cuota',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({concepto,montoCuota,cuotasTotales,cuotasPagadas})});
+    const data=await res.json();
+    if(data.ok){
+      applyFinUpdate(data.financialData);
+      closeModal('modal-cuota');
+    } else {
+      errEl.textContent=data.error||'No se pudo guardar. Intentá de nuevo.';
+      errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent='Error de conexión. Intentá de nuevo.';
+    errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Guardar cuota';
 }
 
 // ===== TASA DE AHORRO Y COMPARACION MES A MES =====
@@ -1050,7 +1356,7 @@ async function loadFinHistory(){
     sel.style.display='inline-block';
     sel.onchange=()=>{
       const chosen=finHistory.find(p=>p.period===sel.value);
-      if(chosen)updateFinPanel(chosen);
+      if(chosen)updateFinPanel({...chosen,cuotas:finState.cuotas}); // las cuotas son un estado vivo, no historico por mes
     };
     updateSavingsRateCard(finHistory[finHistory.length-1].ingresos,finHistory[finHistory.length-1].egresos,finHistory[finHistory.length-1].period);
   }catch(e){console.warn('financial-history error:',e);}
@@ -1226,7 +1532,7 @@ async function doChat(msg,file){
       if(data.objetivoUpdate.ahorradoActual!=null)uObjAhorrado=data.objetivoUpdate.ahorradoActual;
       updateGoalDashboard();
     }
-    if(data.financialUpdate&&userData.plan==='advanced')updateFinPanel(data.financialUpdate);
+    if(data.financialUpdate&&userData.plan==='advanced')applyFinUpdate(data.financialUpdate);
     if(data.instruments&&data.instruments.length>0){
       // Filter out generic/invalid instruments
       const GENERIC = ['proyeccion acumulada','proyección acumulada','total','acumulado'];
