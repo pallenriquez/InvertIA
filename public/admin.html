@@ -7,7 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #F5F6FA; color: #1F2937; padding: 2rem 1.5rem; }
+  body { font-family: 'Inter', sans-serif; background: #F5F6FA; color: #1F2937; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; background: white; border-bottom: 1px solid #E5E7EB; margin-bottom: 2rem; }
+  .logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: #0D0D1A; text-decoration: none; }
+  .logo span { color: #6C47FF; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: #6B7280; text-decoration: none; padding: 8px 14px; border-radius: 9px; border: 1.5px solid #E5E7EB; transition: all .2s; }
+  .back-link:hover { border-color: #6C47FF; color: #6C47FF; }
+  .page-content { padding: 0 1.5rem 2rem; }
   h1 { font-family: 'Space Grotesk', sans-serif; font-size: 22px; margin-bottom: .25rem; }
   .sub { color: #6B7280; font-size: 13.5px; margin-bottom: 2rem; }
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
@@ -37,6 +43,12 @@
 </head>
 <body>
 
+<nav>
+  <a href="/app" class="logo">Invert<span>IA</span></a>
+  <a href="/app" class="back-link">← Volver a la app</a>
+</nav>
+
+<div class="page-content">
 <div class="top-row">
   <div>
     <h1>Panel de administración</h1>
@@ -80,6 +92,7 @@
 
 <div id="empty-msg" class="empty" style="display:none;">No hay usuarios registrados todavía.</div>
 <div id="loading-msg" class="empty">Cargando usuarios...</div>
+</div>
 
 <script>
 const PLAN_BADGE = { free: ['Demo','badge-free'], paid: ['Pro','badge-paid'], advanced: ['Advanced','badge-advanced'] };
