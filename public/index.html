@@ -72,7 +72,7 @@ nav {
   font-size: 15px; color: var(--text-main); text-decoration: none; font-weight: 500;
   padding: .8rem 0; border-bottom: 1px solid var(--border);
 }
-.nav-mobile-panel .btn { width: 100%; justify-content: center; margin-top: .5rem; border-bottom: none; padding: 12px 22px; }
+.nav-mobile-panel .btn { width: 100%; justify-content: center; margin-top: .5rem; padding: 12px 22px; }
 
 @media (max-width: 860px) {
   .nav-links { display: none; }
@@ -630,13 +630,14 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li class="disabled"><span class="pcv2-check x">✕</span> Análisis de mercado en tiempo real</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento de cuotas y tarjetas</li>
         </ul>
         <a href="/register" class="btn-pcv2 outline" style="margin-top:auto;">Probar gratis</a>
       </div>
       <div class="price-card-v2 featured" style="display:flex;flex-direction:column;">
         <div class="pcv2-badge purple">Más popular</div>
         <div class="pcv2-name">Pro</div>
-        <div class="pcv2-amount" id="price-pro"><span>U$S</span>8</div>
+        <div class="pcv2-amount" id="price-pro"><span>$</span>8.000</div>
         <div class="pcv2-period" id="period-pro">por mes</div>
         <ul class="pcv2-features" style="flex:1;">
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
@@ -648,13 +649,14 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento de cuotas y tarjetas</li>
         </ul>
-        <a href="/register?plan=paid" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
+        <a href="/register?plan=paid" id="cta-pro" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
       </div>
       <div class="price-card-v2 advanced" style="display:flex;flex-direction:column;">
         <div class="pcv2-badge green">Avanzado</div>
         <div class="pcv2-name">Advanced</div>
-        <div class="pcv2-amount" id="price-adv"><span>U$S</span>21</div>
+        <div class="pcv2-amount" id="price-adv"><span>$</span>18.000</div>
         <div class="pcv2-period" id="period-adv">por mes</div>
         <ul class="pcv2-features" style="flex:1;">
           <li><span class="pcv2-check">✓</span> Test de perfil completo</li>
@@ -666,8 +668,9 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Modo oscuro y claro</li>
           <li><span class="pcv2-check">✓</span> Control financiero personal</li>
           <li><span class="pcv2-check">✓</span> Panel de inversiones actualizable</li>
+          <li><span class="pcv2-check">✓</span> Seguimiento de cuotas y tarjetas</li>
         </ul>
-        <a href="/register?plan=advanced" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
+        <a href="/register?plan=advanced" id="cta-adv" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
       </div>
     </div>
     </div>
@@ -801,15 +804,18 @@ function toggleFaq(btn) {
 function setBilling(type) {
   document.getElementById('toggle-monthly').classList.toggle('active', type === 'monthly');
   document.getElementById('toggle-yearly').classList.toggle('active', type === 'yearly');
+  const sufijo = type === 'yearly' ? '&ciclo=yearly' : '';
+  document.getElementById('cta-pro').href = `/register?plan=paid${sufijo}`;
+  document.getElementById('cta-adv').href = `/register?plan=advanced${sufijo}`;
   if (type === 'yearly') {
-    document.getElementById('price-pro').innerHTML = '<span>U$S</span>6,40';
+    document.getElementById('price-pro').innerHTML = '<span>$</span>6.400';
     document.getElementById('period-pro').textContent = 'por mes, facturado anual';
-    document.getElementById('price-adv').innerHTML = '<span>U$S</span>16,80';
+    document.getElementById('price-adv').innerHTML = '<span>$</span>14.400';
     document.getElementById('period-adv').textContent = 'por mes, facturado anual';
   } else {
-    document.getElementById('price-pro').innerHTML = '<span>U$S</span>8';
+    document.getElementById('price-pro').innerHTML = '<span>$</span>8.000';
     document.getElementById('period-pro').textContent = 'por mes';
-    document.getElementById('price-adv').innerHTML = '<span>U$S</span>21';
+    document.getElementById('price-adv').innerHTML = '<span>$</span>18.000';
     document.getElementById('period-adv').textContent = 'por mes';
   }
 }
