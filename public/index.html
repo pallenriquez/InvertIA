@@ -47,6 +47,38 @@ nav {
 .nav-links a { font-size: 14px; color: var(--text-muted); text-decoration: none; font-weight: 500; transition: color 0.2s; }
 .nav-links a:hover { color: var(--purple); }
 
+/* NAV MOBILE (hamburguesa) */
+.nav-toggle {
+  display: none; background: none; border: none; cursor: pointer;
+  padding: 8px; width: 40px; height: 40px; flex-direction: column;
+  align-items: center; justify-content: center; gap: 5px;
+}
+.nav-toggle span {
+  display: block; width: 22px; height: 2px; background: var(--text-main);
+  border-radius: 2px; transition: all 0.25s ease;
+}
+.nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-mobile-panel {
+  display: none; flex-direction: column; gap: .25rem;
+  position: fixed; top: 65px; left: 0; right: 0; z-index: 99;
+  background: var(--card-bg); border-bottom: 1px solid var(--nav-border);
+  padding: 1rem 1.5rem 1.5rem; box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  max-height: calc(100vh - 65px); overflow-y: auto;
+}
+.nav-mobile-panel.open { display: flex; }
+.nav-mobile-panel a {
+  font-size: 15px; color: var(--text-main); text-decoration: none; font-weight: 500;
+  padding: .8rem 0; border-bottom: 1px solid var(--border);
+}
+.nav-mobile-panel .btn { width: 100%; justify-content: center; margin-top: .5rem; border-bottom: none; padding: 12px 22px; }
+
+@media (max-width: 860px) {
+  .nav-links { display: none; }
+  .nav-toggle { display: flex; }
+}
+
 /* THEME TOGGLE */
 .theme-toggle {
   width: 44px; height: 24px; border-radius: 999px; border: 1.5px solid var(--border);
@@ -159,6 +191,28 @@ nav {
 .floating-tag.tag-2 { bottom: 22%; left: 6%; border-color: rgba(108,71,255,0.4); }
 @keyframes floatIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
 @keyframes floatBob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);} }
+
+/* PRODUCTO (mockups) */
+.product-section { background: #12121f; padding: 7rem 2rem; }
+.product-section .section-tag { color: #A78BFA; }
+.product-section .section-title { color: white; }
+.product-section .section-sub { color: #9CA3AF; }
+.product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3.5rem; }
+.product-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.75rem; transition: border-color 0.2s, transform 0.2s; }
+.product-card:hover { border-color: rgba(108,71,255,0.4); transform: translateY(-4px); }
+.product-card h3 { font-size: 15.5px; font-weight: 700; color: white; margin-bottom: .4rem; }
+.product-card p { font-size: 13px; color: #9CA3AF; line-height: 1.55; margin-bottom: 1.5rem; }
+.product-mock { background: #0D0D1A; border-radius: 14px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.06); }
+.pm-stat { flex: 1; border-radius: 9px; padding: .55rem; text-align: center; }
+.pm-stat-label { font-size: 9px; color: #6B7280; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 2px; }
+.pm-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #D1D5DB; }
+.pm-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pm-cuota-row { background: rgba(255,255,255,0.04); border-radius: 10px; padding: .65rem .75rem; margin-bottom: .55rem; }
+.pm-cuota-row:last-child { margin-bottom: 0; }
+.pm-cuota-top { display: flex; justify-content: space-between; font-size: 11.5px; color: white; margin-bottom: .35rem; }
+.pm-bar-bg { height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
+.pm-bar-fill { height: 100%; background: #00C48C; }
+@media (max-width: 860px) { .product-grid { grid-template-columns: 1fr; } }
 
 /* PRICING */
 .pricing-section { background: var(--dark); padding: 7rem 2rem; position: relative; overflow: hidden; }
@@ -274,7 +328,20 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
     <a href="/login" class="btn btn-outline">Iniciar sesión</a>
     <a href="/register" class="btn btn-primary">Empezar gratis</a>
   </div>
+  <button class="nav-toggle" id="nav-toggle" onclick="toggleMobileNav()" aria-label="Abrir menú" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<div class="nav-mobile-panel" id="nav-mobile-panel">
+  <a href="#como-funciona" onclick="closeMobileNav()">Cómo funciona</a>
+  <a href="#logros" onclick="closeMobileNav()">Qué lograrás</a>
+  <a href="#precios" onclick="closeMobileNav()">Planes</a>
+  <a href="#faq" onclick="closeMobileNav()">Preguntas frecuentes</a>
+  <a href="#datos" onclick="closeMobileNav()">Uso de datos</a>
+  <a href="/login" class="btn btn-outline">Iniciar sesión</a>
+  <a href="/register" class="btn btn-primary">Empezar gratis</a>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -448,6 +515,96 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
   </div>
 </section>
 
+<!-- PRODUCTO (mockups) -->
+<section class="product-section" id="producto">
+  <div class="section-inner">
+    <div class="section-tag">Producto</div>
+    <h2 class="section-title">Todo tu dinero, en un solo lugar</h2>
+    <p class="section-sub">Así se ve tu progreso adentro de InvertIA — objetivo, finanzas y cuotas, siempre a mano, actualizados por vos o por tu asesor.</p>
+    <div class="product-grid">
+
+      <!-- MOCKUP: MI OBJETIVO -->
+      <div class="product-card">
+        <h3>🎯 Tu objetivo, siempre a la vista</h3>
+        <p>Cuánto llevás ahorrado, cuánto te falta, y una proyección honesta de cuándo lo vas a lograr.</p>
+        <div class="product-mock">
+          <div style="text-align:center;">
+            <div style="font-size:32px;margin-bottom:.2rem;">🏠</div>
+            <div style="font-size:13.5px;font-weight:700;color:white;margin-bottom:1rem;">Comprar mi casa</div>
+            <div style="position:relative;width:96px;height:96px;margin:0 auto 1rem;">
+              <svg width="96" height="96" style="transform:rotate(-90deg);">
+                <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="9"/>
+                <circle cx="48" cy="48" r="40" fill="none" stroke="#00C48C" stroke-width="9" stroke-dasharray="251" stroke-dashoffset="176" stroke-linecap="round"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:white;">30%</div>
+            </div>
+            <div style="display:flex;gap:.6rem;">
+              <div class="pm-stat" style="background:rgba(255,255,255,0.04);">
+                <div class="pm-stat-label">Llevás</div>
+                <div style="font-size:12.5px;font-weight:700;color:#00C48C;">USD 15.000</div>
+              </div>
+              <div class="pm-stat" style="background:rgba(255,255,255,0.04);">
+                <div class="pm-stat-label">Meta</div>
+                <div style="font-size:12.5px;font-weight:700;color:white;">USD 50.000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOCKUP: FINANZAS -->
+      <div class="product-card">
+        <h3>💰 Tus finanzas, ordenadas solas</h3>
+        <p>Ingresos, gastos fijos y esos gastos hormiga que no ves venir, categorizados automáticamente.</p>
+        <div class="product-mock">
+          <div style="display:flex;gap:.5rem;margin-bottom:1.1rem;">
+            <div class="pm-stat" style="background:rgba(0,196,140,0.1);">
+              <div class="pm-stat-label">Ingresos</div>
+              <div style="font-size:12px;font-weight:700;color:#00C48C;">$800k</div>
+            </div>
+            <div class="pm-stat" style="background:rgba(255,255,255,0.04);">
+              <div class="pm-stat-label">Egresos</div>
+              <div style="font-size:12px;font-weight:700;color:#EF4444;">$550k</div>
+            </div>
+            <div class="pm-stat" style="background:rgba(108,71,255,0.12);">
+              <div class="pm-stat-label">Ahorro</div>
+              <div style="font-size:12px;font-weight:700;color:#A78BFA;">31%</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:1rem;">
+            <div style="width:66px;height:66px;border-radius:50%;background:conic-gradient(#6C47FF 0% 45%, #00C48C 45% 70%, #FB923C 70% 100%);flex-shrink:0;position:relative;">
+              <div style="position:absolute;inset:9px;background:#0D0D1A;border-radius:50%;"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+              <div class="pm-legend-item"><span class="pm-legend-dot" style="background:#6C47FF;"></span>Vivienda 45%</div>
+              <div class="pm-legend-item"><span class="pm-legend-dot" style="background:#00C48C;"></span>Alimentación 25%</div>
+              <div class="pm-legend-item"><span class="pm-legend-dot" style="background:#FB923C;"></span>🐜 Hormiga 30%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOCKUP: CUOTAS -->
+      <div class="product-card">
+        <h3>💳 Cuotas, agrupadas por tarjeta</h3>
+        <p>Cuántas cuotas ya pagaste, cuántas te faltan, y cuánto es lo que todavía debés en cada tarjeta.</p>
+        <div class="product-mock">
+          <div style="font-size:11.5px;font-weight:700;color:white;margin-bottom:.65rem;">💳 Visa BBVA</div>
+          <div class="pm-cuota-row">
+            <div class="pm-cuota-top"><span>💻 Notebook</span><span style="color:#6B7280;">3/12</span></div>
+            <div class="pm-bar-bg"><div class="pm-bar-fill" style="width:25%;"></div></div>
+          </div>
+          <div class="pm-cuota-row">
+            <div class="pm-cuota-top"><span>✈️ Viaje a Bariloche</span><span style="color:#6B7280;">1/6</span></div>
+            <div class="pm-bar-bg"><div class="pm-bar-fill" style="width:17%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <!-- PRECIOS -->
 <section class="pricing-section" id="precios">
   <div class="section-inner">
@@ -492,7 +649,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
         </ul>
-        <a href="/register" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
+        <a href="/register?plan=paid" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
       </div>
       <div class="price-card-v2 advanced" style="display:flex;flex-direction:column;">
         <div class="pcv2-badge green">Avanzado</div>
@@ -510,7 +667,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Control financiero personal</li>
           <li><span class="pcv2-check">✓</span> Panel de inversiones actualizable</li>
         </ul>
-        <a href="/register" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
+        <a href="/register?plan=advanced" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
       </div>
     </div>
     </div>
@@ -676,6 +833,28 @@ const counterObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => { if (entry.isIntersecting) { animateCounter(entry.target); counterObserver.unobserve(entry.target); } });
 }, { threshold: 0.4 });
 document.querySelectorAll('.counter-num').forEach(el => counterObserver.observe(el));
+
+// NAV MOBILE
+function toggleMobileNav(){
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn = document.getElementById('nav-toggle');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+function closeMobileNav(){
+  document.getElementById('nav-mobile-panel').classList.remove('open');
+  const btn = document.getElementById('nav-toggle');
+  btn.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn = document.getElementById('nav-toggle');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) {
+    closeMobileNav();
+  }
+});
 </script>
 <!-- NOVA SUPPORT BOT -->
 <style>
