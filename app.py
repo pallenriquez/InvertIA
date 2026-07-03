@@ -20,6 +20,14 @@ DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.absp
 
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 BASE_URL = os.environ.get('BASE_URL', 'https://invertia.onrender.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '').strip().lower()
+
+def is_admin():
+    if not ADMIN_EMAIL or not session.get('user_id'): return False
+    conn = get_db()
+    user = conn.execute('SELECT email FROM users WHERE id=?', (session['user_id'],)).fetchone()
+    conn.close()
+    return bool(user) and user['email'].lower() == ADMIN_EMAIL
 PLAN_PRICES_ARS = {'paid': 8000, 'advanced': 18000}  # precio mensual fijo en pesos
 DESCUENTO_ANUAL = 0.20  # -20% de descuento si paga anual
 PLAN_NAMES = {'paid': 'Pro', 'advanced': 'Advanced'}
@@ -197,6 +205,34 @@ def login_page():
 def app_page():
     if not session.get('user_id'): return redirect('/login')
     return send_from_directory('public','app.html')
+
+@app.route('/admin')
+def admin_page():
+    if not session.get('user_id'): return redirect('/login')
+    if not is_admin(): return redirect('/app')
+    return send_from_directory('public','admin.html')
+
+@app.route('/api/admin/users')
+def admin_users():
+    if not is_admin(): return jsonify({'ok': False, 'error': 'No autorizado.'}), 403
+    conn = get_db()
+    rows = conn.execute('SELECT id,name,email,phone,plan,demo_used,created_at FROM users ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return jsonify({'ok': True, 'users': [dict(r) for r in rows]})
+
+@app.route('/api/admin/set-plan', methods=['POST'])
+def admin_set_plan():
+    if not is_admin(): return jsonify({'ok': False, 'error': 'No autorizado.'}), 403
+    d = request.json or {}
+    user_id = d.get('user_id')
+    plan = d.get('plan')
+    if plan not in ('free', 'paid', 'advanced'): return jsonify({'ok': False, 'error': 'Plan invalido.'})
+    conn = get_db()
+    conn.execute('UPDATE users SET plan=? WHERE id=?', (plan, user_id))
+    conn.commit(); conn.close()
+    print(f'[admin] plan de user_id={user_id} cambiado a {plan}', flush=True)
+    return jsonify({'ok': True})
+
 @app.route('/upgrade')
 def upgrade_page():
     if not session.get('user_id'): return redirect('/login')
