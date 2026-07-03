@@ -20,8 +20,8 @@ DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.absp
 
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 BASE_URL = os.environ.get('BASE_URL', 'https://invertia.onrender.com')
-PLAN_PRICES_USD = {'paid': 8, 'advanced': 21}
-PLAN_PRICES_ARS = {'paid': 8000, 'advanced': 21000}  # precio fijo en pesos (dolar a 1000 para este calculo, no la cotizacion en vivo)
+PLAN_PRICES_ARS = {'paid': 8000, 'advanced': 18000}  # precio mensual fijo en pesos
+DESCUENTO_ANUAL = 0.20  # -20% de descuento si paga anual
 PLAN_NAMES = {'paid': 'Pro', 'advanced': 'Advanced'}
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
@@ -1034,24 +1034,34 @@ FORMATO: SOLO JSON valido, sin texto antes ni despues, sin markdown:
             return jsonify({'ok':True,'text':fallback or text,'needs_ticket':False})
     except Exception as e: return jsonify({'ok':False,'error':str(e)})
 
-def create_mp_subscription(user, plan):
-    """Crea una suscripcion (preapproval) en Mercado Pago para el usuario y plan dados.
+def get_plan_amount(plan, ciclo):
+    """Calcula el monto a cobrar segun el plan y el ciclo (monthly/yearly).
+    Anual = 12 meses con el descuento aplicado, cobrado como un solo pago cada 12 meses."""
+    mensual = PLAN_PRICES_ARS.get(plan)
+    if not mensual: return None
+    if ciclo == 'yearly':
+        return round(mensual * 12 * (1 - DESCUENTO_ANUAL))
+    return mensual
+
+def create_mp_subscription(user, plan, ciclo='monthly'):
+    """Crea una suscripcion (preapproval) en Mercado Pago para el usuario, plan y ciclo dados.
     Devuelve el JSON de respuesta de Mercado Pago, que incluye 'init_point' (el link de pago
     al que hay que redirigir a la persona) e 'id' (el ID de la suscripcion)."""
-    precio_usd = PLAN_PRICES_USD.get(plan)
-    if not precio_usd: return {'error': {'message': 'Plan invalido'}}
-    monto_ars = PLAN_PRICES_ARS.get(plan)
+    if ciclo not in ('monthly', 'yearly'): ciclo = 'monthly'
+    monto = get_plan_amount(plan, ciclo)
+    if not monto: return {'error': {'message': 'Plan invalido'}}
+    frequency = 12 if ciclo == 'yearly' else 1
     body = {
-        'reason': f'InvertIA - Plan {PLAN_NAMES.get(plan, plan)}',
+        'reason': f'InvertIA - Plan {PLAN_NAMES.get(plan, plan)} ({"Anual" if ciclo=="yearly" else "Mensual"})',
         'auto_recurring': {
-            'frequency': 1,
+            'frequency': frequency,
             'frequency_type': 'months',
-            'transaction_amount': monto_ars,
+            'transaction_amount': monto,
             'currency_id': 'ARS',
         },
         'back_url': f'{BASE_URL}/app',
         'payer_email': user['email'],
-        'external_reference': f"{user['id']}:{plan}",
+        'external_reference': f"{user['id']}:{plan}:{ciclo}",
     }
     try:
         resp = requests.post(
@@ -1070,12 +1080,13 @@ def create_subscription():
     if not MP_ACCESS_TOKEN: return jsonify({'ok': False, 'error': 'Mercado Pago no esta configurado todavia.'})
     d = request.json or {}
     plan = d.get('plan')
+    ciclo = d.get('ciclo') if d.get('ciclo') in ('monthly', 'yearly') else 'monthly'
     if plan not in ('paid', 'advanced'): return jsonify({'ok': False, 'error': 'Plan invalido.'})
     conn = get_db()
     user = conn.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
     conn.close()
     if not user: return jsonify({'ok': False, 'error': 'Usuario no encontrado.'})
-    result = create_mp_subscription(user, plan)
+    result = create_mp_subscription(user, plan, ciclo)
     if 'error' in result or not result.get('init_point'):
         print('[Mercado Pago response]', result, flush=True)
         return jsonify({'ok': False, 'error': 'No se pudo generar el link de pago. Intentá de nuevo.'})
@@ -1102,8 +1113,10 @@ def mp_webhook():
         return jsonify({'ok': True})
 
     external_ref = sub.get('external_reference', '')
-    if ':' not in external_ref: return jsonify({'ok': True})
-    user_id_str, plan = external_ref.split(':', 1)
+    partes = external_ref.split(':')
+    if len(partes) < 2: return jsonify({'ok': True})
+    user_id_str, plan = partes[0], partes[1]
+    ciclo = partes[2] if len(partes) > 2 else 'monthly'
     if not user_id_str.isdigit() or plan not in ('paid', 'advanced'): return jsonify({'ok': True})
     user_id = int(user_id_str)
 
