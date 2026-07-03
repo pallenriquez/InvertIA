@@ -74,9 +74,11 @@
 
 <script>
 (function(){
-  const plan = new URLSearchParams(window.location.search).get('plan');
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan');
+  const ciclo = params.get('ciclo');
   if (plan === 'paid' || plan === 'advanced') {
-    document.getElementById('login-link').href = `/login?plan=${plan}`;
+    document.getElementById('login-link').href = `/login?plan=${plan}${ciclo==='yearly'?'&ciclo=yearly':''}`;
   }
 })();
 </script>
@@ -101,8 +103,14 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   });
   const data = await res.json();
   if (data.ok) {
-    const plan = new URLSearchParams(window.location.search).get('plan');
-    window.location.href = (plan === 'paid' || plan === 'advanced') ? `/app?plan=${plan}` : '/app';
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan');
+    const ciclo = params.get('ciclo');
+    if (plan === 'paid' || plan === 'advanced') {
+      window.location.href = `/app?plan=${plan}${ciclo === 'yearly' ? '&ciclo=yearly' : ''}`;
+    } else {
+      window.location.href = '/app';
+    }
   } else {
     error.textContent = data.error;
     error.style.display = 'block';
