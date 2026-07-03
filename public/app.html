@@ -1268,7 +1268,6 @@ function updateFinPanel(fin){
   document.getElementById('fin-ingresos-val').textContent=`$${ingresos.toLocaleString('es-AR')}`;
   document.getElementById('fin-egresos-val').textContent=`$${egresos.toLocaleString('es-AR')}`;
   document.getElementById('fin-balance-val').textContent=`$${bal.toLocaleString('es-AR')}`;
-  document.getElementById('fin-greeting').textContent=getFinGreeting(ingresos?Math.round((bal/ingresos)*100):null);
 
   const fijos=filterNonZero(fin.categorias||{});
   const fijosKeys=Object.keys(fijos);
@@ -1317,7 +1316,8 @@ function updateFinPanel(fin){
     hormigaWrap.style.display='none';
   }
 
-  updateSavingsRateCard(ingresos,egresos,fin.period,fin.ahorroDeclarado);
+  const tasaReal=updateSavingsRateCard(ingresos,egresos,fin.period,fin.ahorroDeclarado);
+  document.getElementById('fin-greeting').textContent=getFinGreeting(tasaReal);
   renderCuotas(fin.cuotas||[]);
   setTimeout(showFinToast, 600);
 }
@@ -1520,11 +1520,12 @@ async function deleteCuota(){
 function updateSavingsRateCard(ingresos,egresos,forPeriod,ahorroDeclarado){
   const wrap=document.getElementById('fin-savings-wrap');
   if(!wrap||!ingresos)return;
-  // Prioridad: 1) lo que el usuario aclaro explicitamente en la charla de finanzas,
-  // 2) el capital mensual que definio al armar su objetivo de inversion,
-  // 3) recien como ultimo recurso, un estimado en base al balance (ingresos-egresos), que puede
+  // Prioridad: 1) lo que el usuario declaro explicitamente en la charla de finanzas (en pesos),
+  // 2) recien como ultimo recurso, un estimado en base al balance (ingresos-egresos), que puede
   // estar inflado si hay gastos sin declarar todavia.
-  const ahorroMonto = (ahorroDeclarado!=null) ? ahorroDeclarado : (uCapMensual!=null ? uCapMensual : null);
+  // OJO: uCapMensual es el capital de inversion en DOLARES (de otra parte de la app) — nunca usarlo
+  // aca, mezclaria monedas distintas y el % saldria mal (ej: USD 328 / ARS 3.000.000 = ~0%).
+  const ahorroMonto = (ahorroDeclarado!=null) ? ahorroDeclarado : null;
   const esEstimado = ahorroMonto==null;
   const rate = esEstimado ? Math.round(((ingresos-egresos)/ingresos)*100) : Math.round((ahorroMonto/ingresos)*100);
   document.getElementById('fin-savings-rate').textContent=rate+'%';
@@ -1544,6 +1545,7 @@ function updateSavingsRateCard(ingresos,egresos,forPeriod,ahorroDeclarado){
       else{cmp.textContent=`Igual que ${prev.periodLabel}.`;cmp.style.color='var(--text2)';}
     } else { cmp.textContent=''; }
   } else { cmp.textContent=''; }
+  return rate;
 }
 
 let finHistory=[];
