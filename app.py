@@ -677,11 +677,12 @@ REGLAS del JSON:
   cuotasPagadas (cuantas ya pago). Si no te aclara la tarjeta o la categoria, preguntaselas — son importantes
   porque el panel agrupa las cuotas por tarjeta. Igual que el resto: NUNCA inventes una cuota que el usuario no
   te confirmo, ni le agregues cuotas de ejemplo.
-- ahorroMensualDeclarado: SOLO incluilo si en la conversacion de FINANZAS el usuario te aclara explicitamente un
-  monto distinto al capital mensual que ya definio cuando armaron su objetivo de inversion (ej: 'en realidad ahora
-  ahorro menos, unos 250000 por mes'). Si no dice nada nuevo, NO mandes este campo — el panel ya usa por defecto el
-  capital mensual que el usuario definio al armar su objetivo, no hace falta que lo repitas ni que lo calcules vos
-  a partir de ingresos menos egresos (eso da un numero inflado, no es lo mismo que el ahorro real declarado).
+- ahorroMensualDeclarado: SIEMPRE que en la conversacion de FINANZAS el usuario te diga cuanto ahorra por mes EN
+  PESOS (ej: 'ahorro 500000 por mes', 'lo que me sobra son 500 lucas'), incluí ese numero en este campo. OJO: esto
+  es un numero DISTINTO y en OTRA MONEDA que el capital mensual en dolares que definio al armar su objetivo de
+  inversion — nunca confundas uno con el otro, ni asumas que son lo mismo. Si el usuario no menciono un monto de
+  ahorro en pesos en esta conversacion de finanzas, NO mandes este campo (no inventes un numero ni lo calcules vos
+  a partir de ingresos menos egresos).
 =====
 """
 
@@ -754,6 +755,9 @@ def chat():
            "pero no repitas preguntas sobre datos que ya tenes en el contexto de la conversacion):\n"
            "   - Ingresos mensuales totales\n"
            "   - Egresos mensuales totales\n"
+           "   - Cuanto ahorra por mes EN PESOS (esto es un dato propio, distinto del capital mensual en dolares que "
+           "ya definio para su objetivo de inversion — pedilo igual, no lo des por sabido ni lo asumas a partir de "
+           "ingresos menos egresos)\n"
            "   - Gastos FIJOS grandes y recurrentes (alquiler/hipoteca, servicios, seguros, cuotas, prepaga, etc)\n"
            "   - Gastos HORMIGA: gastos chicos y frecuentes que suelen pasar desapercibidos pero suman (cafes, "
            "delivery, apps de comida, salidas a comer afuera, antojos, suscripciones de streaming, taxis/uber). "
