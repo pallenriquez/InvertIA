@@ -38,6 +38,7 @@ def init_db():
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
+            phone TEXT,
             plan TEXT DEFAULT 'free',
             demo_used INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +106,9 @@ def init_db():
     ''')
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
+        except: pass
+    for col in ['phone TEXT']:
+        try: conn.execute(f'ALTER TABLE users ADD COLUMN {col}')
         except: pass
     for col in ['mp_preapproval_id TEXT']:
         try: conn.execute(f'ALTER TABLE payments ADD COLUMN {col}')
@@ -205,13 +209,16 @@ def logout(): session.clear(); return redirect('/')
 def register():
     d = request.json or {}
     name,email,pw = d.get('name','').strip(),d.get('email','').strip().lower(),d.get('password','')
-    if not name or not email or not pw: return jsonify({'ok':False,'error':'Completá todos los campos.'})
+    phone = d.get('phone','').strip()
+    if not name or not email or not pw or not phone: return jsonify({'ok':False,'error':'Completá todos los campos.'})
     if len(pw)<6: return jsonify({'ok':False,'error':'La contraseña debe tener al menos 6 caracteres.'})
+    digits = re.sub(r'\D','',phone)
+    if len(digits)<8: return jsonify({'ok':False,'error':'Ingresá un teléfono válido, con código de área.'})
     conn = get_db()
     if conn.execute('SELECT id FROM users WHERE email=?',(email,)).fetchone():
         conn.close(); return jsonify({'ok':False,'error':'Ya existe una cuenta con ese email.'})
     hashed = bcrypt.hashpw(pw.encode(),bcrypt.gensalt()).decode()
-    cur = conn.execute('INSERT INTO users (name,email,password) VALUES (?,?,?)',(name,email,hashed))
+    cur = conn.execute('INSERT INTO users (name,email,password,phone) VALUES (?,?,?,?)',(name,email,hashed,phone))
     conn.commit(); session['user_id']=cur.lastrowid; session['user_name']=name; conn.close()
     return jsonify({'ok':True})
 
