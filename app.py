@@ -17,6 +17,12 @@ Session(app)
 
 ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
+
+MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
+BASE_URL = os.environ.get('BASE_URL', 'https://invertia.onrender.com')
+PLAN_PRICES_USD = {'paid': 8, 'advanced': 21}
+PLAN_PRICES_ARS = {'paid': 8000, 'advanced': 21000}  # precio fijo en pesos (dolar a 1000 para este calculo, no la cotizacion en vivo)
+PLAN_NAMES = {'paid': 'Pro', 'advanced': 'Advanced'}
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 def get_db():
@@ -92,12 +98,16 @@ def init_db():
             currency TEXT DEFAULT 'USD',
             status TEXT DEFAULT 'paid',
             plan TEXT,
+            mp_preapproval_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     ''')
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
+        except: pass
+    for col in ['mp_preapproval_id TEXT']:
+        try: conn.execute(f'ALTER TABLE payments ADD COLUMN {col}')
         except: pass
     for col in ['gastos_hormiga TEXT','cuotas TEXT','ahorro_declarado REAL']:
         try: conn.execute(f'ALTER TABLE financial_data ADD COLUMN {col}')
@@ -1017,16 +1027,101 @@ FORMATO: SOLO JSON valido, sin texto antes ni despues, sin markdown:
             return jsonify({'ok':True,'text':fallback or text,'needs_ticket':False})
     except Exception as e: return jsonify({'ok':False,'error':str(e)})
 
-@app.route('/api/activate-paid', methods=['POST'])
-def activate_paid():
-    if not session.get('user_id'): return jsonify({'ok':False})
+def create_mp_subscription(user, plan):
+    """Crea una suscripcion (preapproval) en Mercado Pago para el usuario y plan dados.
+    Devuelve el JSON de respuesta de Mercado Pago, que incluye 'init_point' (el link de pago
+    al que hay que redirigir a la persona) e 'id' (el ID de la suscripcion)."""
+    precio_usd = PLAN_PRICES_USD.get(plan)
+    if not precio_usd: return {'error': {'message': 'Plan invalido'}}
+    monto_ars = PLAN_PRICES_ARS.get(plan)
+    body = {
+        'reason': f'InvertIA - Plan {PLAN_NAMES.get(plan, plan)}',
+        'auto_recurring': {
+            'frequency': 1,
+            'frequency_type': 'months',
+            'transaction_amount': monto_ars,
+            'currency_id': 'ARS',
+        },
+        'back_url': f'{BASE_URL}/app',
+        'payer_email': user['email'],
+        'external_reference': f"{user['id']}:{plan}",
+    }
+    try:
+        resp = requests.post(
+            'https://api.mercadopago.com/preapproval',
+            headers={'Authorization': f'Bearer {MP_ACCESS_TOKEN}', 'Content-Type': 'application/json'},
+            json=body, timeout=20
+        )
+        return resp.json()
+    except Exception as e:
+        print('[Mercado Pago create subscription error]', repr(e), flush=True)
+        return {'error': {'message': str(e)}}
+
+@app.route('/api/create-subscription', methods=['POST'])
+def create_subscription():
+    if not session.get('user_id'): return jsonify({'ok': False, 'error': 'No autenticado.'})
+    if not MP_ACCESS_TOKEN: return jsonify({'ok': False, 'error': 'Mercado Pago no esta configurado todavia.'})
     d = request.json or {}
-    plan = d.get('plan','paid')
-    if plan not in ('paid','advanced'): plan = 'paid'
+    plan = d.get('plan')
+    if plan not in ('paid', 'advanced'): return jsonify({'ok': False, 'error': 'Plan invalido.'})
     conn = get_db()
-    conn.execute('UPDATE users SET plan=? WHERE id=?',(plan,session['user_id']))
-    conn.commit(); conn.close()
-    return jsonify({'ok':True})
+    user = conn.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+    conn.close()
+    if not user: return jsonify({'ok': False, 'error': 'Usuario no encontrado.'})
+    result = create_mp_subscription(user, plan)
+    if 'error' in result or not result.get('init_point'):
+        print('[Mercado Pago response]', result, flush=True)
+        return jsonify({'ok': False, 'error': 'No se pudo generar el link de pago. Intentá de nuevo.'})
+    return jsonify({'ok': True, 'init_point': result['init_point']})
+
+@app.route('/api/mp-webhook', methods=['POST'])
+def mp_webhook():
+    """Mercado Pago llama a esta URL cuando cambia el estado de una suscripcion.
+    Por seguridad, NUNCA confiamos en el contenido de la notificacion directamente:
+    volvemos a preguntarle a la API de Mercado Pago (con nuestro Access Token) cual es
+    el estado real de esa suscripcion antes de activar ningun plan."""
+    data = request.json or {}
+    preapproval_id = data.get('data', {}).get('id') or request.args.get('id')
+    if not preapproval_id or not MP_ACCESS_TOKEN:
+        return jsonify({'ok': True})  # respondemos 200 igual para que MP no reintente sin parar
+    try:
+        resp = requests.get(
+            f'https://api.mercadopago.com/preapproval/{preapproval_id}',
+            headers={'Authorization': f'Bearer {MP_ACCESS_TOKEN}'}, timeout=20
+        )
+        sub = resp.json()
+    except Exception as e:
+        print('[Mercado Pago webhook fetch error]', repr(e), flush=True)
+        return jsonify({'ok': True})
+
+    external_ref = sub.get('external_reference', '')
+    if ':' not in external_ref: return jsonify({'ok': True})
+    user_id_str, plan = external_ref.split(':', 1)
+    if not user_id_str.isdigit() or plan not in ('paid', 'advanced'): return jsonify({'ok': True})
+    user_id = int(user_id_str)
+
+    if sub.get('status') == 'authorized':
+        conn = get_db()
+        # Evitar procesar la misma suscripcion dos veces si Mercado Pago reintenta el webhook
+        ya_procesado = conn.execute(
+            'SELECT id FROM payments WHERE mp_preapproval_id=?', (preapproval_id,)
+        ).fetchone()
+        if not ya_procesado:
+            conn.execute('UPDATE users SET plan=? WHERE id=?', (plan, user_id))
+            monto = sub.get('auto_recurring', {}).get('transaction_amount', 0)
+            conn.execute(
+                'INSERT INTO payments (user_id,amount,currency,status,plan,mp_preapproval_id) VALUES (?,?,?,?,?,?)',
+                (user_id, monto, 'ARS', 'paid', plan, preapproval_id)
+            )
+            conn.commit()
+        conn.close()
+    elif sub.get('status') in ('cancelled', 'paused'):
+        # Si la persona cancela la suscripcion en Mercado Pago, le sacamos el plan pago
+        conn = get_db()
+        conn.execute("UPDATE users SET plan='free' WHERE id=? AND plan=?", (user_id, plan))
+        conn.commit(); conn.close()
+
+    return jsonify({'ok': True})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT',3000))
