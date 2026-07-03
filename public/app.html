@@ -938,29 +938,23 @@ async function submitMovement(){
 }
 
 async function activatePlan(plan){
-  const res=await fetch('/api/activate-paid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})});
-  const data=await res.json();
-  if(data.ok){
-    closeModal('modal-upgrade');
-    if(userData)userData.plan=plan;
-    document.getElementById('cfg-plan').textContent=plan==='advanced'?'Plan Advanced ⚡':'Plan Pro ✓';
-    document.getElementById('demo-limit-box').style.display='none';
-    // Always show chat input after upgrade
-    showChatInput();
-    if(chatState==='initial')chatState='chatting';
-    // If no profile yet, prompt for capital
-    if(!rProfile){rProfile={key:'moderado',label:'⚖️ Moderado',desc:''};rScores=[33,34,33];}
-    const planName=plan==='advanced'?'Advanced':'Pro';
-    if(!uCapital){
-      if(chatState==='await_capital'){
-        // Ya se le había preguntado el capital mensual antes de tocar el límite de demo.
-        // No repetir la pregunta: dejar que responda directo a la que ya está en pantalla.
-        addAI(`¡Bienvenido al plan ${planName}! Segui donde quedaste ↑`);
-      } else {
-        addAI(`¡Bienvenido al plan ${planName}! ¿Con cuánto capital mensual contás para invertir?`);
-        chatState='await_capital';
-      }
+  const btn=event?event.target:null;
+  const originalText=btn?btn.textContent:null;
+  if(btn){btn.disabled=true;btn.textContent='Generando link de pago...';}
+  try{
+    const res=await fetch('/api/create-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})});
+    const data=await res.json();
+    if(data.ok && data.init_point){
+      // Redirige a la pagina de pago de Mercado Pago. Cuando la persona confirme el pago ahi,
+      // Mercado Pago nos avisa por webhook y recien ahi activamos el plan — no antes.
+      window.location.href=data.init_point;
+    } else {
+      alert(data.error||'No se pudo generar el link de pago. Intentá de nuevo en un momento.');
+      if(btn){btn.disabled=false;btn.textContent=originalText;}
     }
+  }catch(e){
+    alert('Error de conexión. Intentá de nuevo.');
+    if(btn){btn.disabled=false;btn.textContent=originalText;}
   }
 }
 
