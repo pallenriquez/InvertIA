@@ -1068,6 +1068,19 @@ async function loadUser(){
     uCapital=sp.capital||'';uObjetivo=sp.objetivo||'';
     uObjMonto=sp.objetivoMonto;uObjPlazo=sp.objetivoPlazoMeses;uCapMensual=sp.capitalMensual;uObjRetorno=sp.objetivoRetornoAnual;uObjAhorrado=sp.objetivoAhorradoActual;
     if(data.financialData&&userData.plan==='advanced')applyFinUpdate(data.financialData);
+    if(!uCapital){
+      // Ya tenemos el perfil (hizo el test), pero todavia no llego a decir capital/objetivo.
+      // Retomamos justo ahi — NUNCA repetir el test de 7 preguntas ya resuelto.
+      document.getElementById('step-welcome').classList.remove('active');
+      document.getElementById('step-result').classList.add('active');
+      document.getElementById('result-greeting').textContent=`¡Hola de nuevo, ${userData.name}! Retomemos donde quedaste:`;
+      const badge=document.getElementById('profile-badge');badge.textContent=rProfile.label;badge.className='profile-badge '+rProfile.key;
+      document.getElementById('profile-desc').textContent='';
+      setTimeout(()=>{['c','m','a'].forEach((k,i)=>{document.getElementById('fill-'+k).style.width=rScores[i]+'%';document.getElementById('pct-'+k).textContent=rScores[i]+'%';});},100);
+      addAI('¿Con cuánto capital mensual contás para invertir? Podés decirme en pesos o dólares.');
+      chatState='await_capital';showChatInput();
+      return;
+    }
     showReturningUser(data.daysSinceLastVisit);
     return;
   }
@@ -1084,7 +1097,7 @@ function showReturningUser(days){
   document.getElementById('profile-section').style.display='none';
   document.getElementById('restart-bar').style.display='none';
   document.getElementById('ctx-capital').textContent=uCapital||'—';
-  document.getElementById('ctx-objetivo').textContent=uObjetivo||'—';
+  document.getElementById('ctx-objetivo').textContent=uObjetivo?formatGoalLabel(uObjetivo):'—';
   document.getElementById('ctx-profile').textContent=rProfile?rProfile.label:'—';
   document.getElementById('context-bar').style.display='flex';
   chatState='chatting';showChatInput();
@@ -1113,6 +1126,34 @@ function getGoalEmoji(objetivo){
   for(const [k,v] of Object.entries(GOAL_EMOJIS)){if(low.includes(k))return v;}
   return '🎯';
 }
+function formatGoalLabel(text){
+  // Convierte una respuesta corta ("auto", "casa") en una frase natural ("Comprar mi auto"),
+  // sin tocar lo que ya viene como frase completa ("Ahorrar para el retiro").
+  if(!text) return 'Mi objetivo';
+  const t=text.trim();
+  const low=t.toLowerCase();
+  const verbos=['comprar','ahorrar','viajar','juntar','armar','formar','tener','hacer','pagar','cubrir','llegar','lograr','conseguir','invertir','jubilarme','retirarme','pasar'];
+  if(verbos.some(v=>low.startsWith(v)) || t.split(' ').length>3){
+    return t.charAt(0).toUpperCase()+t.slice(1);
+  }
+  const conArticulo = /^(un|una|mi|el|la|los|las)\s+/.test(low);
+  if(['casa','depto','departamento','inmueble','vivienda','auto','coche','vehiculo','moto','notebook','computadora','celular'].some(k=>low.includes(k))){
+    return 'Comprar '+(conArticulo?low:'mi '+low);
+  }
+  if(low.includes('viaje')||low.includes('vacacion')){
+    return conArticulo?('Hacer '+low):('Hacer un '+low);
+  }
+  if(low.includes('retiro')||low.includes('jubilac')){
+    return 'Ahorrar para '+(conArticulo?low:'mi '+low);
+  }
+  if(low.includes('negocio')||low.includes('empresa')){
+    return 'Armar mi '+low.replace(/^(un|una|mi)\s+/,'');
+  }
+  if(low.includes('educacion')||low.includes('educación')||low.includes('estudio')){
+    return 'Invertir en '+(conArticulo?low:'mi '+low);
+  }
+  return 'Ahorrar para '+(conArticulo?low:'mi '+low);
+}
 function formatDuration(totalMeses){
   if(!totalMeses||totalMeses<=0)return '—';
   const a=Math.floor(totalMeses/12),m=totalMeses%12;
@@ -1130,7 +1171,7 @@ function updateGoalDashboard(){
   document.getElementById('tab-bar').style.display='block';
   document.getElementById('tab-goal-btn').style.display='flex';
   document.getElementById('goal-emoji-big').textContent=emoji;
-  document.getElementById('goal-name').textContent=objetivoLabel;
+  document.getElementById('goal-name').textContent=formatGoalLabel(objetivoLabel);
   document.getElementById('goal-target-val').textContent=`USD ${uObjMonto.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
   document.getElementById('goal-pending').style.display='none';
 
@@ -1184,7 +1225,7 @@ function updateGoalBasic(){
   document.getElementById('tab-bar').style.display='block';
   document.getElementById('tab-goal-btn').style.display='flex';
   document.getElementById('goal-emoji-big').textContent=emoji;
-  document.getElementById('goal-name').textContent=uObjetivo;
+  document.getElementById('goal-name').textContent=formatGoalLabel(uObjetivo);
   document.getElementById('goal-pending').style.display='block';
   // Update tab button emoji too
   document.getElementById('tab-goal-btn').textContent=emoji+' Objetivo';
@@ -1591,6 +1632,10 @@ function initResults(){
   const mi=sc.indexOf(Math.max(...sc));
   const profiles=[{key:'conservador',label:'🛡️ Conservador',desc:'Priorizás la seguridad. Buscás preservar tu capital con inversiones estables.'},{key:'moderado',label:'⚖️ Moderado',desc:'Buscás equilibrio entre crecimiento y seguridad con volatilidad controlada.'},{key:'arriesgado',label:'🚀 Arriesgado',desc:'Buscás maximizar retornos con horizonte largo y tolerancia a la volatilidad.'}];
   rProfile=profiles[mi];rScores=pcts;
+  // Guardar el resultado del test YA, apenas se conoce — si el usuario recarga la pagina o le
+  // asignan un plan antes de llegar a contestar capital/objetivo, no tiene que repetir el test.
+  const cleanLabelEarly=rProfile.label.replace(/[^\u0000-\u007E\u00A0-\u024F ]/g,'').trim();
+  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:rProfile.key,profileLabel:cleanLabelEarly,scores:rScores})}).catch(e=>console.warn('save-profile temprano error:',e));
   document.getElementById('step-quiz').classList.remove('active');document.getElementById('step-result').classList.add('active');
   document.getElementById('result-greeting').textContent=`Listo, ${userData.name}! Analizamos tus respuestas:`;
   const badge=document.getElementById('profile-badge');badge.textContent=rProfile.label;badge.className='profile-badge '+rProfile.key;
@@ -1692,7 +1737,7 @@ async function sendChat(){
     const cleanLabel=rProfile.label.replace(/[^\u0000-\u007E\u00A0-\u024F ]/g,'').trim();
     try{await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:rProfile.key,profileLabel:cleanLabel,scores:safeScores,capital:uCapital,objetivo:uObjetivo})});}catch(e){console.warn('save-profile error:',e);}
     document.getElementById('ctx-capital').textContent=uCapital;
-    document.getElementById('ctx-objetivo').textContent=uObjetivo;
+    document.getElementById('ctx-objetivo').textContent=formatGoalLabel(uObjetivo);
     document.getElementById('ctx-profile').textContent=rProfile.label;
     document.getElementById('context-bar').style.display='flex';
     updateGoalBasic(); // Show goal tab immediately
