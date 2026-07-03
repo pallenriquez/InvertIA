@@ -59,6 +59,9 @@
     <label>Email</label>
     <input type="email" id="email" placeholder="tu@email.com" required autocomplete="email" />
 
+    <label>Teléfono</label>
+    <input type="tel" id="phone" placeholder="Ej: 11 2345 6789" required autocomplete="tel" />
+
     <label>Contraseña</label>
     <input type="password" id="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password" />
 
@@ -66,9 +69,17 @@
     <button type="submit" class="btn" id="btn">Crear cuenta gratis →</button>
   </form>
 
-  <div class="footer-link">¿Ya tenés cuenta? <a href="/login">Iniciá sesión</a></div>
+  <div class="footer-link">¿Ya tenés cuenta? <a href="/login" id="login-link">Iniciá sesión</a></div>
 </div>
 
+<script>
+(function(){
+  const plan = new URLSearchParams(window.location.search).get('plan');
+  if (plan === 'paid' || plan === 'advanced') {
+    document.getElementById('login-link').href = `/login?plan=${plan}`;
+  }
+})();
+</script>
 <script>
 document.getElementById('form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -84,12 +95,14 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     body: JSON.stringify({
       name: document.getElementById('name').value,
       email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
       password: document.getElementById('password').value
     })
   });
   const data = await res.json();
   if (data.ok) {
-    window.location.href = '/app';
+    const plan = new URLSearchParams(window.location.search).get('plan');
+    window.location.href = (plan === 'paid' || plan === 'advanced') ? `/app?plan=${plan}` : '/app';
   } else {
     error.textContent = data.error;
     error.style.display = 'block';
