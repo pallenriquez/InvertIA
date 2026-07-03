@@ -438,12 +438,16 @@ main{padding:1.5rem 1rem 8rem;}
       <button class="modal-close" onclick="closeModal('modal-checkout-confirm')">×</button>
     </div>
     <div class="modal-body">
+      <div style="display:flex;background:var(--bg3);border-radius:999px;padding:4px;margin-bottom:1.1rem;">
+        <button onclick="setCheckoutCiclo('monthly')" id="cc-toggle-monthly" style="flex:1;padding:.55rem;border:none;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--purple);color:white;">Mensual</button>
+        <button onclick="setCheckoutCiclo('yearly')" id="cc-toggle-yearly" style="flex:1;padding:.55rem;border:none;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);">Anual <span style="color:var(--green);">-20%</span></button>
+      </div>
       <div style="background:var(--bg3);border-radius:14px;padding:1.25rem;margin-bottom:1.25rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
           <span style="font-size:15px;font-weight:700;color:var(--text);" id="cc-plan-name">Plan Pro</span>
           <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--purple);" id="cc-plan-price">$8.000</span>
         </div>
-        <div style="font-size:12.5px;color:var(--text2);">Cobro automático todos los meses. Podés cancelar cuando quieras desde "Plan y facturación".</div>
+        <div style="font-size:12.5px;color:var(--text2);" id="cc-plan-detail">Cobro automático todos los meses. Podés cancelar cuando quieras desde "Plan y facturación".</div>
       </div>
       <div style="font-size:12.5px;color:var(--text2);margin-bottom:1.25rem;line-height:1.5;">
         Al confirmar, te vamos a redirigir a Mercado Pago para completar el pago de forma segura. Tu plan se activa automáticamente apenas Mercado Pago confirme el cobro.
@@ -962,31 +966,54 @@ async function submitMovement(){
   btn.disabled=false;btn.textContent='Guardar movimiento';
 }
 
-const PLAN_LABELS={paid:{name:'Plan Pro',price:'$8.000/mes'},advanced:{name:'Plan Advanced',price:'$21.000/mes'}};
+const PLAN_PRICES_MONTHLY={paid:8000,advanced:18000};
+const PLAN_NAMES_CO={paid:'Plan Pro',advanced:'Plan Advanced'};
 let pendingCheckoutPlan=null;
-function openCheckoutConfirm(plan){
+let pendingCheckoutCiclo='monthly';
+function openCheckoutConfirm(plan,ciclo){
   pendingCheckoutPlan=plan;
-  const info=PLAN_LABELS[plan];
-  document.getElementById('cc-plan-name').textContent=info.name;
-  document.getElementById('cc-plan-price').textContent=info.price;
+  pendingCheckoutCiclo=(ciclo==='yearly')?'yearly':'monthly';
   document.getElementById('cc-error').style.display='none';
   document.getElementById('cc-confirm-btn').disabled=false;
   document.getElementById('cc-confirm-btn').textContent='Confirmar y pagar →';
+  renderCheckoutSummary();
   closeModal('modal-upgrade');
   openModal('modal-checkout-confirm');
 }
+function setCheckoutCiclo(ciclo){
+  pendingCheckoutCiclo=ciclo;
+  renderCheckoutSummary();
+}
+function renderCheckoutSummary(){
+  const plan=pendingCheckoutPlan;
+  const mensual=PLAN_PRICES_MONTHLY[plan];
+  const esAnual=pendingCheckoutCiclo==='yearly';
+  const montoAnual=Math.round(mensual*12*0.8);
+  document.getElementById('cc-toggle-monthly').style.background=esAnual?'transparent':'var(--purple)';
+  document.getElementById('cc-toggle-monthly').style.color=esAnual?'var(--text2)':'white';
+  document.getElementById('cc-toggle-yearly').style.background=esAnual?'var(--purple)':'transparent';
+  document.getElementById('cc-toggle-yearly').style.color=esAnual?'white':'var(--text2)';
+  document.getElementById('cc-plan-name').textContent=PLAN_NAMES_CO[plan];
+  if(esAnual){
+    document.getElementById('cc-plan-price').textContent=`$${montoAnual.toLocaleString('es-AR')}`;
+    document.getElementById('cc-plan-detail').textContent=`Equivale a $${Math.round(mensual*0.8).toLocaleString('es-AR')}/mes. Se cobra una vez por año — podés cancelar cuando quieras desde "Plan y facturación".`;
+  } else {
+    document.getElementById('cc-plan-price').textContent=`$${mensual.toLocaleString('es-AR')}`;
+    document.getElementById('cc-plan-detail').textContent='Cobro automático todos los meses. Podés cancelar cuando quieras desde "Plan y facturación".';
+  }
+}
 function confirmCheckout(){
   if(!pendingCheckoutPlan)return;
-  activatePlan(pendingCheckoutPlan);
+  activatePlan(pendingCheckoutPlan,pendingCheckoutCiclo);
 }
 
-async function activatePlan(plan){
+async function activatePlan(plan,ciclo){
   const btn=document.getElementById('cc-confirm-btn');
   const errEl=document.getElementById('cc-error');
   errEl.style.display='none';
   btn.disabled=true;btn.textContent='Generando link de pago...';
   try{
-    const res=await fetch('/api/create-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})});
+    const res=await fetch('/api/create-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,ciclo:ciclo||'monthly'})});
     const data=await res.json();
     if(data.ok && data.init_point){
       // Redirige a la pagina de pago de Mercado Pago. Cuando la persona confirme el pago ahi,
@@ -1028,9 +1055,10 @@ async function loadUser(){
   // Si vino desde la landing con un plan elegido (?plan=paid o ?plan=advanced), le mostramos
   // la confirmación de pago directamente, sin que tenga que ir a buscar el botón de nuevo.
   const planFromUrl = new URLSearchParams(window.location.search).get('plan');
+  const cicloFromUrl = new URLSearchParams(window.location.search).get('ciclo');
   if((planFromUrl==='paid'||planFromUrl==='advanced') && userData.plan==='free'){
     history.replaceState(null,'',window.location.pathname); // limpiar el parametro para que no se dispare de nuevo al refrescar
-    setTimeout(()=>openCheckoutConfirm(planFromUrl),300);
+    setTimeout(()=>openCheckoutConfirm(planFromUrl,cicloFromUrl),300);
   }
 
   if(data.savedProfile&&data.savedProfile.profileKey){
