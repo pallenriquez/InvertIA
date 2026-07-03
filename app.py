@@ -233,6 +233,24 @@ def admin_set_plan():
     print(f'[admin] plan de user_id={user_id} cambiado a {plan}', flush=True)
     return jsonify({'ok': True})
 
+@app.route('/api/admin/create-user', methods=['POST'])
+def admin_create_user():
+    if not is_admin(): return jsonify({'ok': False, 'error': 'No autorizado.'}), 403
+    d = request.json or {}
+    name,email,pw = d.get('name','').strip(), d.get('email','').strip().lower(), d.get('password','')
+    phone = d.get('phone','').strip()
+    plan = d.get('plan') if d.get('plan') in ('free','paid','advanced') else 'free'
+    if not name or not email or not pw: return jsonify({'ok': False, 'error': 'Completá nombre, email y contraseña.'})
+    if len(pw) < 6: return jsonify({'ok': False, 'error': 'La contraseña debe tener al menos 6 caracteres.'})
+    conn = get_db()
+    if conn.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone():
+        conn.close(); return jsonify({'ok': False, 'error': 'Ya existe una cuenta con ese email.'})
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    conn.execute('INSERT INTO users (name,email,password,phone,plan) VALUES (?,?,?,?,?)', (name,email,hashed,phone,plan))
+    conn.commit(); conn.close()
+    print(f'[admin] usuario nuevo creado: {email} (plan={plan})', flush=True)
+    return jsonify({'ok': True})
+
 @app.route('/upgrade')
 def upgrade_page():
     if not session.get('user_id'): return redirect('/login')
