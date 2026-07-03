@@ -62,9 +62,17 @@
     <button type="submit" class="btn" id="btn">Iniciar sesión →</button>
   </form>
 
-  <div class="footer-link">¿No tenés cuenta? <a href="/register">Registrate gratis</a></div>
+  <div class="footer-link">¿No tenés cuenta? <a href="/register" id="register-link">Registrate gratis</a></div>
 </div>
 
+<script>
+(function(){
+  const plan = new URLSearchParams(window.location.search).get('plan');
+  if (plan === 'paid' || plan === 'advanced') {
+    document.getElementById('register-link').href = `/register?plan=${plan}`;
+  }
+})();
+</script>
 <script>
 document.getElementById('form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -84,7 +92,8 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   });
   const data = await res.json();
   if (data.ok) {
-    window.location.href = '/app';
+    const plan = new URLSearchParams(window.location.search).get('plan');
+    window.location.href = (plan === 'paid' || plan === 'advanced') ? `/app?plan=${plan}` : '/app';
   } else {
     error.textContent = data.error;
     error.style.display = 'block';
