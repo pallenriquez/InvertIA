@@ -259,7 +259,21 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 .sinput{flex:1;padding:7px 11px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);}
 .sinput:focus{border-color:var(--purple);}
 .ssend{width:32px;height:32px;border-radius:8px;background:var(--purple);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
-@media(max-width:480px){.support-panel{width:calc(100vw - 32px);right:16px;}.pie-inner{flex-direction:column;}.demo-plans{grid-template-columns:1fr;}.upgrade-grid{grid-template-columns:1fr;}}
+@media(max-width:480px){
+.support-panel{width:calc(100vw - 32px);right:16px;}
+.pie-inner{flex-direction:column;}
+.demo-plans{grid-template-columns:1fr;}
+.upgrade-grid{grid-template-columns:1fr;}
+.score-grid{grid-template-columns:1fr;gap:8px;}
+.score-item{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;text-align:left;}
+.score-item .score-bar-bg{flex:1;margin:0 12px;}
+#tab-bar{padding:.5rem .75rem;}
+#tab-bar button{font-size:11.5px;padding:.5rem .4rem;}
+.user-chip span{display:none;}
+nav{padding:.75rem 1rem;}
+main{padding:1.5rem 1rem 8rem;}
+.question-card{padding:1.25rem;}
+}
 </style>
 </head>
 <body>
@@ -469,7 +483,7 @@ main{max-width:720px;margin:0 auto;padding:2rem 1.5rem 8rem;}
 <div id="tab-bar" style="display:none;position:sticky;top:57px;z-index:150;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 1.5rem;">
   <div style="max-width:720px;margin:0 auto;display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;">
     <button id="tab-chat-btn" onclick="switchTab('chat')" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--shadow);transition:all .2s;">💬 Asesor</button>
-    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Mi objetivo</button>
+    <button id="tab-goal-btn" onclick="switchTab('goal')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">🎯 Objetivo</button>
     <button id="tab-fin-btn" onclick="switchTab('fin')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💰 Finanzas</button>
     <button id="tab-cuotas-btn" onclick="switchTab('cuotas')" style="flex:1;display:none;align-items:center;justify-content:center;padding:.5rem 1rem;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:transparent;color:var(--text2);transition:all .2s;">💳 Cuotas</button>
   </div>
@@ -1097,7 +1111,7 @@ function updateGoalBasic(){
   document.getElementById('goal-name').textContent=uObjetivo;
   document.getElementById('goal-pending').style.display='block';
   // Update tab button emoji too
-  document.getElementById('tab-goal-btn').textContent=emoji+' Mi objetivo';
+  document.getElementById('tab-goal-btn').textContent=emoji+' Objetivo';
 }
 
 // ===== FIN DASHBOARD (pestaña Finanzas, solo plan Advanced) =====
