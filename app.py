@@ -1,7 +1,7 @@
 from flask import Flask, request, session, jsonify, send_from_directory, redirect
 from flask_session import Session
 import sqlite3, bcrypt, requests, os, json, re, secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__, static_folder='public')
 # CRITICO: nunca usar una clave fija como fallback. Si no hay SESSION_SECRET configurada,
@@ -110,6 +110,11 @@ def init_db():
             mp_preapproval_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+        CREATE TABLE IF NOT EXISTS registration_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     ''')
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
@@ -253,8 +258,9 @@ def admin_create_user():
 
 @app.route('/upgrade')
 def upgrade_page():
-    if not session.get('user_id'): return redirect('/login')
-    return send_from_directory('public','upgrade.html')
+    # Pagina vieja, reemplazada por el modal "Mejorar plan" dentro de la app (usaba el endpoint
+    # /api/activate-paid que ya no existe). La redirigimos por si alguien todavia tiene el link guardado.
+    return redirect('/app')
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/')
 
@@ -268,11 +274,24 @@ def register():
     if len(pw)<6: return jsonify({'ok':False,'error':'La contraseña debe tener al menos 6 caracteres.'})
     digits = re.sub(r'\D','',phone)
     if len(digits)<8: return jsonify({'ok':False,'error':'Ingresá un teléfono válido, con código de área.'})
+
+    # Freno anti-abuso: no mas de 3 cuentas nuevas por dia desde la misma conexion
+    ip = (request.headers.get('X-Forwarded-For','') or request.remote_addr or '').split(',')[0].strip()
     conn = get_db()
+    if ip:
+        hace_24h = (datetime.now() - timedelta(hours=24)).isoformat()
+        intentos = conn.execute('SELECT COUNT(*) as c FROM registration_attempts WHERE ip=? AND created_at>=?',(ip,hace_24h)).fetchone()['c']
+        if intentos >= 3:
+            conn.close(); return jsonify({'ok':False,'error':'Se alcanzó el límite de cuentas nuevas creadas desde esta conexión hoy. Si sos vos mismo y necesitás otra cuenta, escribinos a soporte.'})
+
     if conn.execute('SELECT id FROM users WHERE email=?',(email,)).fetchone():
         conn.close(); return jsonify({'ok':False,'error':'Ya existe una cuenta con ese email.'})
+    if conn.execute('SELECT id FROM users WHERE phone=?',(digits,)).fetchone():
+        conn.close(); return jsonify({'ok':False,'error':'Ya existe una cuenta creada con ese teléfono.'})
+
     hashed = bcrypt.hashpw(pw.encode(),bcrypt.gensalt()).decode()
-    cur = conn.execute('INSERT INTO users (name,email,password,phone) VALUES (?,?,?,?)',(name,email,hashed,phone))
+    cur = conn.execute('INSERT INTO users (name,email,password,phone) VALUES (?,?,?,?)',(name,email,hashed,digits))
+    conn.execute('INSERT INTO registration_attempts (ip) VALUES (?)',(ip,))
     conn.commit(); session['user_id']=cur.lastrowid; session['user_name']=name; conn.close()
     return jsonify({'ok':True})
 
