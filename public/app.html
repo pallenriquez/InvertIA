@@ -333,7 +333,7 @@ main{padding:1.5rem 1rem 8rem;}
       <div class="upgrade-grid">
         <div class="upgrade-card">
           <div style="font-size:13px;font-weight:600;color:var(--text2);">Pro</div>
-          <div class="upgrade-price">U$S 8 <span>/ mes</span></div>
+          <div class="upgrade-price">$8.000 <span>/ mes</span></div>
           <ul class="upgrade-features">
             <li>Chat ilimitado</li>
             <li>Cartera personalizada</li>
@@ -344,7 +344,7 @@ main{padding:1.5rem 1rem 8rem;}
         </div>
         <div class="upgrade-card advanced-card">
           <div style="font-size:13px;font-weight:600;color:var(--green);">Advanced</div>
-          <div class="upgrade-price" style="color:var(--green);">U$S 21 <span>/ mes</span></div>
+          <div class="upgrade-price" style="color:var(--green);">$18.000 <span>/ mes</span></div>
           <ul class="upgrade-features">
             <li>Todo lo del Pro</li>
             <li>Control financiero</li>
@@ -482,7 +482,10 @@ main{padding:1.5rem 1rem 8rem;}
 </div>
 
 <nav>
-  <div class="logo">Invert<span>IA</span></div>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <a href="/" class="logo" style="text-decoration:none;">Invert<span>IA</span></a>
+    <a href="/" style="font-size:12.5px;color:var(--text2);text-decoration:none;font-weight:600;padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);">← Inicio</a>
+  </div>
   <div class="nav-right">
     <div class="user-chip">
       <div class="user-avatar-nav" id="nav-avatar">?</div>
@@ -723,13 +726,13 @@ main{padding:1.5rem 1rem 8rem;}
         <div class="demo-plans">
           <div class="demo-plan-card featured">
             <div style="font-size:12px;font-weight:600;color:var(--text2);">Pro</div>
-            <div class="demo-plan-price pro">U$S 8<span style="font-size:12px;font-weight:400;">/mes</span></div>
+            <div class="demo-plan-price pro">$8.000<span style="font-size:12px;font-weight:400;">/mes</span></div>
             <div class="demo-plan-features">Chat ilimitado · Cartera personalizada · Memoria mensual</div>
             <button class="demo-btn pro" onclick="openCheckoutConfirm('paid')">Empezar Pro</button>
           </div>
           <div class="demo-plan-card adv">
             <div style="font-size:12px;font-weight:600;color:var(--green);">Advanced</div>
-            <div class="demo-plan-price adv">U$S 21<span style="font-size:12px;font-weight:400;">/mes</span></div>
+            <div class="demo-plan-price adv">$18.000<span style="font-size:12px;font-weight:400;">/mes</span></div>
             <div class="demo-plan-features">Todo el Pro · Control financiero · Panel inversiones</div>
             <button class="demo-btn adv" onclick="openCheckoutConfirm('advanced')">Empezar Advanced</button>
           </div>
