@@ -59,6 +59,9 @@
     <label>Email</label>
     <input type="email" id="email" placeholder="tu@email.com" required autocomplete="email" />
 
+    <label>Teléfono</label>
+    <input type="tel" id="phone" placeholder="Ej: 11 2345 6789" required autocomplete="tel" />
+
     <label>Contraseña</label>
     <input type="password" id="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password" />
 
@@ -66,9 +69,80 @@
     <button type="submit" class="btn" id="btn">Crear cuenta gratis →</button>
   </form>
 
-  <div class="footer-link">¿Ya tenés cuenta? <a href="/login">Iniciá sesión</a></div>
+  <div id="verify-step" style="display:none;">
+    <p style="font-size:14px;color:#374151;line-height:1.5;">Te mandamos un código de 6 dígitos a <strong id="verify-email"></strong>. Escribilo acá abajo para confirmar tu cuenta.</p>
+    <label>Código de verificación</label>
+    <input type="text" id="code" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:4px;font-size:18px;text-align:center;" />
+    <div class="error" id="verify-error"></div>
+    <button class="btn" id="verify-btn" onclick="verifyCode()">Confirmar código</button>
+    <div style="text-align:center;margin-top:1rem;font-size:13px;color:#6B7280;">
+      ¿No te llegó? <a href="#" id="resend-link" style="color:#6C47FF;text-decoration:none;font-weight:500;">Reenviar código</a>
+    </div>
+  </div>
+
+  <div class="footer-link" id="login-footer">¿Ya tenés cuenta? <a href="/login" id="login-link">Iniciá sesión</a></div>
 </div>
 
+<script>
+let verifyingEmail = '';
+let pendingRedirect = '/app';
+
+function verifyCode(){ submitCode(); }
+
+async function submitCode(){
+  const btn = document.getElementById('verify-btn');
+  const error = document.getElementById('verify-error');
+  const code = document.getElementById('code').value.trim();
+  error.style.display = 'none';
+  if(!code){ error.textContent='Ingresá el código.'; error.style.display='block'; return; }
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  try{
+    const res = await fetch('/api/verify-code', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:verifyingEmail, code})});
+    const data = await res.json();
+    if(data.ok){
+      window.location.href = pendingRedirect;
+    } else {
+      error.textContent = data.error || 'No se pudo verificar.';
+      error.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Confirmar código';
+    }
+  }catch(e){
+    error.textContent = 'Error de conexión.';
+    error.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Confirmar código';
+  }
+}
+
+document.getElementById('resend-link').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const error = document.getElementById('verify-error');
+  error.style.display='none';
+  try{
+    const res = await fetch('/api/resend-code', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:verifyingEmail})});
+    const data = await res.json();
+    if(data.ok){
+      error.style.color = '#059669'; error.style.background='#ECFDF5'; error.style.borderColor='#A7F3D0';
+      error.textContent = 'Te mandamos un código nuevo.'; error.style.display='block';
+    } else {
+      error.style.color = '#DC2626'; error.style.background='#FEF2F2'; error.style.borderColor='#FECACA';
+      error.textContent = data.error || 'No se pudo reenviar.'; error.style.display='block';
+    }
+  }catch(e){
+    error.textContent = 'Error de conexión.'; error.style.display='block';
+  }
+});
+</script>
+
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan');
+  const ciclo = params.get('ciclo');
+  if (plan === 'paid' || plan === 'advanced') {
+    document.getElementById('login-link').href = `/login?plan=${plan}${ciclo==='yearly'?'&ciclo=yearly':''}`;
+  }
+})();
+</script>
 <script>
 document.getElementById('form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -84,12 +158,32 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     body: JSON.stringify({
       name: document.getElementById('name').value,
       email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
       password: document.getElementById('password').value
     })
   });
   const data = await res.json();
-  if (data.ok) {
-    window.location.href = '/app';
+  if (data.ok && data.needsVerification) {
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan');
+    const ciclo = params.get('ciclo');
+    pendingRedirect = (plan === 'paid' || plan === 'advanced') ? `/app?plan=${plan}${ciclo === 'yearly' ? '&ciclo=yearly' : ''}` : '/app';
+    verifyingEmail = data.email;
+    document.getElementById('verify-email').textContent = data.email;
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('login-footer').style.display = 'none';
+    document.getElementById('verify-step').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Crear cuenta gratis →';
+  } else if (data.ok) {
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan');
+    const ciclo = params.get('ciclo');
+    if (plan === 'paid' || plan === 'advanced') {
+      window.location.href = `/app?plan=${plan}${ciclo === 'yearly' ? '&ciclo=yearly' : ''}`;
+    } else {
+      window.location.href = '/app';
+    }
   } else {
     error.textContent = data.error;
     error.style.display = 'block';
