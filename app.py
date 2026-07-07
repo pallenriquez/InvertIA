@@ -276,7 +276,6 @@ def upgrade_page():
 def logout(): session.clear(); return redirect('/')
 
 # AUTH
-@app.route('/register', methods=['POST'])
 def send_verification_email(to_email, code):
     if not RESEND_API_KEY:
         print('[Resend] RESEND_API_KEY no configurada, no se pudo enviar el codigo.', flush=True)
@@ -307,6 +306,7 @@ def send_verification_email(to_email, code):
         print('[Resend] excepcion al enviar:', repr(e), flush=True)
         return False
 
+@app.route('/register', methods=['POST'])
 def register():
     d = request.json or {}
     name,email,pw = d.get('name','').strip(),d.get('email','').strip().lower(),d.get('password','')
