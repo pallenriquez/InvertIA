@@ -21,6 +21,8 @@ DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.absp
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 BASE_URL = os.environ.get('BASE_URL', 'https://invertia.onrender.com')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '').strip().lower()
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'InvertIA <onboarding@resend.dev>')
 
 def is_admin():
     if not ADMIN_EMAIL or not session.get('user_id'): return False
@@ -113,6 +115,15 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS registration_attempts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+            email TEXT PRIMARY KEY,
+            name TEXT,
+            phone TEXT,
+            password_hash TEXT,
+            code TEXT,
             ip TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
@@ -266,6 +277,36 @@ def logout(): session.clear(); return redirect('/')
 
 # AUTH
 @app.route('/register', methods=['POST'])
+def send_verification_email(to_email, code):
+    if not RESEND_API_KEY:
+        print('[Resend] RESEND_API_KEY no configurada, no se pudo enviar el codigo.', flush=True)
+        return False
+    try:
+        resp = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {RESEND_API_KEY}', 'Content-Type': 'application/json'},
+            json={
+                'from': RESEND_FROM_EMAIL,
+                'to': [to_email],
+                'subject': f'Tu código de verificación InvertIA: {code}',
+                'html': f'''
+                    <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:2rem;">
+                        <h2 style="color:#0D0D1A;">Invert<span style="color:#6C47FF;">IA</span></h2>
+                        <p style="color:#1F2937;font-size:15px;">Tu código de verificación es:</p>
+                        <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#6C47FF;margin:1rem 0;">{code}</div>
+                        <p style="color:#6B7280;font-size:13px;">Vence en 10 minutos. Si vos no pediste esto, ignorá este mail.</p>
+                    </div>
+                '''
+            }, timeout=15
+        )
+        if resp.status_code >= 300:
+            print('[Resend] error al enviar:', resp.status_code, resp.text, flush=True)
+            return False
+        return True
+    except Exception as e:
+        print('[Resend] excepcion al enviar:', repr(e), flush=True)
+        return False
+
 def register():
     d = request.json or {}
     name,email,pw = d.get('name','').strip(),d.get('email','').strip().lower(),d.get('password','')
@@ -290,9 +331,58 @@ def register():
         conn.close(); return jsonify({'ok':False,'error':'Ya existe una cuenta creada con ese teléfono.'})
 
     hashed = bcrypt.hashpw(pw.encode(),bcrypt.gensalt()).decode()
-    cur = conn.execute('INSERT INTO users (name,email,password,phone) VALUES (?,?,?,?)',(name,email,hashed,digits))
+    code = f'{secrets.randbelow(1000000):06d}'
+    conn.execute('''INSERT INTO pending_registrations (email,name,phone,password_hash,code,ip,created_at) VALUES (?,?,?,?,?,?,?)
+        ON CONFLICT(email) DO UPDATE SET name=excluded.name,phone=excluded.phone,password_hash=excluded.password_hash,
+        code=excluded.code,ip=excluded.ip,created_at=excluded.created_at''',
+        (email,name,digits,hashed,code,ip,datetime.now().isoformat()))
+    conn.commit(); conn.close()
+
+    enviado = send_verification_email(email, code)
+    if not enviado:
+        return jsonify({'ok':False,'error':'No pudimos enviar el código de verificación. Intentá de nuevo en un momento.'})
+    return jsonify({'ok':True,'needsVerification':True,'email':email})
+
+@app.route('/api/verify-code', methods=['POST'])
+def verify_code():
+    d = request.json or {}
+    email = d.get('email','').strip().lower()
+    code = d.get('code','').strip()
+    if not email or not code: return jsonify({'ok':False,'error':'Faltan datos.'})
+    conn = get_db()
+    row = conn.execute('SELECT * FROM pending_registrations WHERE email=?',(email,)).fetchone()
+    if not row:
+        conn.close(); return jsonify({'ok':False,'error':'No encontramos un registro pendiente para ese email. Registrate de nuevo.'})
+    vencido = datetime.now() - datetime.fromisoformat(row['created_at']) > timedelta(minutes=10)
+    if vencido:
+        conn.close(); return jsonify({'ok':False,'error':'El código venció. Pedí uno nuevo.'})
+    if row['code'] != code:
+        conn.close(); return jsonify({'ok':False,'error':'Código incorrecto.'})
+
+    # Chequeos de nuevo por las dudas (pudo haberse registrado alguien mas mientras tanto)
+    ip = (request.headers.get('X-Forwarded-For','') or request.remote_addr or '').split(',')[0].strip()
+    if conn.execute('SELECT id FROM users WHERE email=?',(email,)).fetchone():
+        conn.close(); return jsonify({'ok':False,'error':'Ya existe una cuenta con ese email.'})
+    cur = conn.execute('INSERT INTO users (name,email,password,phone) VALUES (?,?,?,?)',(row['name'],email,row['password_hash'],row['phone']))
     conn.execute('INSERT INTO registration_attempts (ip) VALUES (?)',(ip,))
-    conn.commit(); session['user_id']=cur.lastrowid; session['user_name']=name; conn.close()
+    conn.execute('DELETE FROM pending_registrations WHERE email=?',(email,))
+    conn.commit(); session['user_id']=cur.lastrowid; session['user_name']=row['name']; conn.close()
+    return jsonify({'ok':True})
+
+@app.route('/api/resend-code', methods=['POST'])
+def resend_code():
+    d = request.json or {}
+    email = d.get('email','').strip().lower()
+    if not email: return jsonify({'ok':False,'error':'Falta el email.'})
+    conn = get_db()
+    row = conn.execute('SELECT * FROM pending_registrations WHERE email=?',(email,)).fetchone()
+    if not row:
+        conn.close(); return jsonify({'ok':False,'error':'No encontramos un registro pendiente para ese email.'})
+    code = f'{secrets.randbelow(1000000):06d}'
+    conn.execute('UPDATE pending_registrations SET code=?, created_at=? WHERE email=?',(code,datetime.now().isoformat(),email))
+    conn.commit(); conn.close()
+    enviado = send_verification_email(email, code)
+    if not enviado: return jsonify({'ok':False,'error':'No pudimos reenviar el código. Intentá en un momento.'})
     return jsonify({'ok':True})
 
 @app.route('/login', methods=['POST'])
