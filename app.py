@@ -138,7 +138,7 @@ def init_db():
     for col in ['mp_preapproval_id TEXT']:
         try: conn.execute(f'ALTER TABLE payments ADD COLUMN {col}')
         except: pass
-    for col in ['gastos_hormiga TEXT','cuotas TEXT','ahorro_declarado REAL']:
+    for col in ['gastos_hormiga TEXT','cuotas TEXT','ahorro_declarado REAL','current_period TEXT']:
         try: conn.execute(f'ALTER TABLE financial_data ADD COLUMN {col}')
         except: pass
     conn.commit()
@@ -918,6 +918,34 @@ def get_dolar_mep():
         print('[dolar MEP fetch error]', e, flush=True)
     return _dolar_mep_cache['rate'] or 1500  # fallback si la API falla y no hay cache previo
 
+def ensure_current_month_rollover(user_id):
+    """Si arranco un mes nuevo desde la ultima vez que se toco el panel financiero, traslada los
+    gastos FIJOS (categorias) automaticamente sin que el usuario tenga que repetirlos, y resetea
+    los gastos hormiga (variables, esos si hay que volver a contarlos cada mes). Devuelve True si
+    hizo el traspaso ahora mismo (para avisarle al asesor en el contexto), False si no hizo falta."""
+    conn = get_db()
+    fin = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(user_id,)).fetchone()
+    if not fin or not fin['categorias']:
+        conn.close(); return False
+    mes_actual = datetime.now().strftime('%Y-%m')
+    if fin['current_period'] == mes_actual:
+        conn.close(); return False  # ya esta al dia, no hace falta nada
+
+    # Antes de trasladar, dejamos guardado el snapshot final del mes que se cierra
+    if fin['current_period']:
+        conn.execute('''INSERT INTO financial_snapshots (user_id,period,ingresos,egresos,categorias,gastos_hormiga,updated_at) VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT(user_id,period) DO UPDATE SET ingresos=excluded.ingresos,egresos=excluded.egresos,
+            categorias=excluded.categorias,gastos_hormiga=excluded.gastos_hormiga,updated_at=excluded.updated_at''',
+            (user_id,fin['current_period'],fin['ingresos'],fin['egresos'],fin['categorias'],fin['gastos_hormiga'],datetime.now().isoformat()))
+
+    # Los gastos FIJOS (categorias) se mantienen igual mes a mes; los hormiga (variables) arrancan en cero de nuevo
+    categorias = json.loads(fin['categorias']) if fin['categorias'] else {}
+    total_fijos = sum(sum(v.values()) for v in categorias.values()) if categorias else 0
+    conn.execute("UPDATE financial_data SET egresos=?, gastos_hormiga='{}', current_period=?, updated_at=? WHERE user_id=?",
+        (total_fijos, mes_actual, datetime.now().isoformat(), user_id))
+    conn.commit(); conn.close()
+    return True
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     if not session.get('user_id'): return jsonify({'ok':False,'error':'No autenticado.'})
@@ -929,6 +957,7 @@ def chat():
     capital,objetivo,message = d.get('capital',''),d.get('objetivo',''),d.get('message','')
     obj_monto,obj_plazo,cap_mensual = d.get('objetivoMonto'),d.get('objetivoPlazoMeses'),d.get('capitalMensual')
     is_advanced = user['plan']=='advanced'
+    mes_nuevo_rollover = ensure_current_month_rollover(session['user_id']) if is_advanced else False
 
     capital_usd = capital
     tiene_pesos = capital and any(w in capital.lower() for w in ['peso','ars','pesos','argentino',' p '])
@@ -954,6 +983,13 @@ def chat():
     if obj_monto: ctx.append(f"Monto objetivo: USD {obj_monto:,.0f}")
     if obj_plazo: ctx.append(f"Plazo proyectado: {obj_plazo} meses")
     if cap_mensual: ctx.append(f"Capital mensual a invertir: USD {cap_mensual:,.0f}")
+    if mes_nuevo_rollover: ctx.append(
+        "ARRANCO UN MES NUEVO: ya trasladamos automaticamente los gastos FIJOS del usuario (alquiler, "
+        "expensas, deudas, etc, siguen iguales que el mes pasado, no hace falta pedirselos de nuevo). Lo "
+        "unico que falta este mes son los gastos HORMIGA/variables, que arrancaron en cero. Si el usuario "
+        "menciona algo de finanzas, contale brevemente que sus gastos fijos ya quedaron cargados solos, y "
+        "preguntale si algo de eso cambio o si tiene gastos variables nuevos para contarte de este mes."
+    )
 
     system = (
         f"Sos un asesor financiero argentino experto y personal. Voseo. Directo, profesional. Sin asteriscos ni markdown.\n"
@@ -964,6 +1000,25 @@ def chat():
            "⚙️ (arriba a la derecha) y toque 'Mejorar plan'. NUNCA inventes el nombre de una seccion que no existe "
            "(nunca digas 'Mi Plan', 'Configuracion de plan', ni nada parecido) — el boton se llama exactamente "
            "'Mejorar plan'.\n")
+        + ("\n===== ASESORAMIENTO PROACTIVO (esto te diferencia de un broker comun) =====\n"
+           "1. FONDO DE EMERGENCIA ANTES DE INVERTIR: cuando alguien te cuenta cuanto quiere invertir por mes "
+           "(sobre todo si suena como que es toda la plata que le sobra), preguntale si ya tiene un colchon de "
+           "emergencia armado (idealmente 3 a 6 meses de sus gastos, en algo liquido tipo caja de ahorro o plazo "
+           "fijo). Si no lo tiene, se lo decis con honestidad: recomendale priorizar juntar ese colchon antes de "
+           "invertir todo lo que le sobra, aunque eso signifique invertir menos por ahora (o nada por unos meses). "
+           "Un broker no te va a decir esto porque gana plata con que operes — vos si, porque tu objetivo es que a "
+           "la persona le vaya bien de verdad, no maximizar cuanto invierte.\n"
+           "2. SIMULADOR '¿QUE PASARIA SI...?': si el usuario plantea un hipotetico tipo '¿que pasa si dejo de "
+           "gastar en X y meto esa plata en mi objetivo?' o '¿que pasa si aporto Y mas por mes?', calculalo en el "
+           "momento con numeros concretos (usando la misma logica de interes compuesto que usas para proyectar el "
+           "objetivo): cuanto suma en total al final, cuantos meses antes llegaria a la meta, etc. Nunca respondas "
+           "en abstracto ('te ayudaria mucho') — siempre con el numero puntual.\n"
+           "3. CUOTAS VS CONTADO: si el usuario te pregunta si le conviene financiar una compra en cuotas o pagarla "
+           "de contado, compara concretamente dos cosas: (a) cuanto termina pagando de mas en cuotas si hay interes "
+           "o recargo (si no sabes el recargo especifico de esa compra, preguntaselo), contra (b) cuanto podria "
+           "generar esa misma plata si la invirtiera en vez de gastarla de contado, usando su perfil y retorno "
+           "estimado. Dale una recomendacion clara con los numeros de las dos opciones, no una respuesta generica.\n"
+           "==============================================================\n")
         + ("\n===== CONTROL FINANCIERO (plan Advanced) =====\n"
            "Cuando el usuario pida ayuda para organizar sus finanzas, armar un presupuesto, o entender en que gasta:\n"
            "1. Hacé las preguntas necesarias para armar el panel completo (podes ir de a poco en mensajes sucesivos, "
@@ -976,6 +1031,11 @@ def chat():
            "   - Gastos FIJOS grandes y recurrentes (alquiler/hipoteca, servicios, seguros, cuotas, prepaga, etc)\n"
            "   - Gastos HORMIGA: gastos chicos y frecuentes que suelen pasar desapercibidos pero suman (cafes, "
            "delivery, apps de comida, salidas a comer afuera, antojos, suscripciones de streaming, taxis/uber). "
+           "IMPORTANTE SOBRE LOS GASTOS FIJOS: una vez que el usuario te los cuenta, el sistema los guarda y los "
+           "traslada SOLO todos los meses siguientes — el usuario NUNCA tiene que repetirtelos mes a mes. Podes "
+           "contarle esto como algo bueno de la app ('los gastos fijos te los guardo, no hace falta que me los "
+           "digas de nuevo cada mes — solo contame lo que cambia'). Lo que SI hay que volver a preguntar cada mes "
+           "son los gastos HORMIGA/variables, esos arrancan en cero cada mes porque cambian todo el tiempo.\n"
            "Preguntaselos especificamente si el usuario no los menciono solo. IMPORTANTE — NO CONFUNDIR: la compra "
            "de supermercado, carniceria, verduleria y demas alimentacion BASICA/necesaria para vivir NUNCA es un "
            "gasto hormiga, es un gasto FIJO (va en categorias, subcategoria tipo 'Alimentacion'). Gasto hormiga es "
@@ -1216,16 +1276,17 @@ def chat():
             conn.commit()
 
         if fin_update and is_advanced:
-            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,cuotas,ahorro_declarado,updated_at) VALUES (?,?,?,?,?,?,?,?)
+            conn.execute('''INSERT INTO financial_data (user_id,ingresos,egresos,categorias,gastos_hormiga,cuotas,ahorro_declarado,current_period,updated_at) VALUES (?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(user_id) DO UPDATE SET ingresos=COALESCE(excluded.ingresos,ingresos),
                 egresos=COALESCE(excluded.egresos,egresos),categorias=COALESCE(excluded.categorias,categorias),
                 gastos_hormiga=COALESCE(excluded.gastos_hormiga,gastos_hormiga),
                 cuotas=COALESCE(excluded.cuotas,cuotas),
-                ahorro_declarado=COALESCE(excluded.ahorro_declarado,ahorro_declarado),updated_at=excluded.updated_at''',
+                ahorro_declarado=COALESCE(excluded.ahorro_declarado,ahorro_declarado),
+                current_period=COALESCE(current_period,excluded.current_period),updated_at=excluded.updated_at''',
                 (session['user_id'],fin_update.get('ingresos'),fin_update.get('egresos'),
                  json.dumps(fin_update.get('categorias',{})),json.dumps(fin_update.get('gastosHormiga',{})),
                  json.dumps(fin_update.get('cuotas')) if fin_update.get('cuotas') is not None else None,
-                 fin_update.get('ahorroMensualDeclarado'),
+                 fin_update.get('ahorroMensualDeclarado'),datetime.now().strftime('%Y-%m'),
                  datetime.now().isoformat()))
             # Snapshot del mes actual, para poder ver la evolucion mes a mes en el historial
             current_period = datetime.now().strftime('%Y-%m')
