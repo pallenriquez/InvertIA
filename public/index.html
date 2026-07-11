@@ -197,7 +197,7 @@ nav {
 .product-section .section-tag { color: #A78BFA; }
 .product-section .section-title { color: white; }
 .product-section .section-sub { color: #9CA3AF; }
-.product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3.5rem; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 3.5rem; }
 .product-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.75rem; transition: border-color 0.2s, transform 0.2s; }
 .product-card:hover { border-color: rgba(108,71,255,0.4); transform: translateY(-4px); }
 .product-card h3 { font-size: 15.5px; font-weight: 700; color: white; margin-bottom: .4rem; }
@@ -601,6 +601,29 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
         </div>
       </div>
 
+      <!-- MOCKUP: GASTOS FIJOS AUTOMATICOS -->
+      <div class="product-card">
+        <h3>🔁 Gastos fijos, una sola vez</h3>
+        <p>Se los contás una vez y se repiten solos cada mes — nunca más tenés que volver a decirlos.</p>
+        <div class="product-mock">
+          <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:1rem;font-size:11px;color:#6B7280;">
+            <span>Julio</span>
+            <span style="color:#00C48C;">→</span>
+            <span style="color:white;font-weight:700;">Agosto</span>
+          </div>
+          <div class="pm-cuota-row" style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11.5px;color:white;">🏠 Alquiler $250.000</span>
+            <span style="font-size:9.5px;color:#00C48C;font-weight:600;">✓ Se descuenta solo</span>
+          </div>
+          <div class="pm-cuota-row" style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11.5px;color:white;">💡 Servicios $45.000</span>
+            <span style="font-size:9.5px;color:#00C48C;font-weight:600;">✓ Se descuenta solo</span>
+          </div>
+          <div style="border-top:1px dashed rgba(255,255,255,0.15);margin:.85rem 0;"></div>
+          <div style="font-size:11px;color:#9CA3AF;">🐜 Gastos variables de agosto: <span style="color:#A78BFA;">contános los nuevos</span></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -631,6 +654,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento de cuotas y tarjetas</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Gastos fijos automáticos mes a mes</li>
         </ul>
         <a href="/register" class="btn-pcv2 outline" style="margin-top:auto;">Probar gratis</a>
       </div>
@@ -650,6 +674,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li class="disabled"><span class="pcv2-check x">✕</span> Control financiero personal</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Panel de inversiones actualizable</li>
           <li class="disabled"><span class="pcv2-check x">✕</span> Seguimiento de cuotas y tarjetas</li>
+          <li class="disabled"><span class="pcv2-check x">✕</span> Gastos fijos automáticos mes a mes</li>
         </ul>
         <a href="/register?plan=paid" id="cta-pro" class="btn-pcv2 filled" style="margin-top:auto;">Empezar ahora</a>
       </div>
@@ -669,6 +694,7 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
           <li><span class="pcv2-check">✓</span> Control financiero personal</li>
           <li><span class="pcv2-check">✓</span> Panel de inversiones actualizable</li>
           <li><span class="pcv2-check">✓</span> Seguimiento de cuotas y tarjetas</li>
+          <li><span class="pcv2-check">✓</span> Gastos fijos automáticos mes a mes</li>
         </ul>
         <a href="/register?plan=advanced" id="cta-adv" class="btn-pcv2 filled-green" style="margin-top:auto;">Empezar ahora</a>
       </div>
