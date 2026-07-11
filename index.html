@@ -103,7 +103,7 @@ nav {
 .btn-green:hover { background: #00a87a; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,196,140,0.3); }
 
 /* HERO */
-.hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 50%, #16213E 100%); padding: 6rem 2rem 4rem; text-align: center; position: relative; overflow: hidden; }
+.hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); padding: 6rem 2rem 4rem; text-align: center; position: relative; overflow: hidden; }
 .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(ellipse at 60% 40%, rgba(108,71,255,0.15) 0%, transparent 60%), radial-gradient(ellipse at 30% 70%, rgba(0,196,140,0.08) 0%, transparent 50%); }
 .hero-content { position: relative; z-index: 1; max-width: 780px; }
 .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(108,71,255,0.2); border: 1px solid rgba(108,71,255,0.4); color: #A78BFA; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; margin-bottom: 1.5rem; }
@@ -158,7 +158,7 @@ nav {
 .tag-orange { background: rgba(251,146,60,0.2); color: #FB923C; }
 
 /* DIVERSIFICACION */
-.diversify-section { background: linear-gradient(180deg, var(--dark) 0%, #12121f 100%); padding: 7rem 2rem; position: relative; overflow: hidden; }
+.diversify-section { background: linear-gradient(180deg, var(--dark) 0%, var(--dark2) 100%); padding: 7rem 2rem; position: relative; overflow: hidden; }
 .diversify-section::before { content: ''; position: absolute; top: 10%; right: -10%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(108,71,255,0.12) 0%, transparent 70%); pointer-events: none; }
 .diversify-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1.1fr; gap: 4rem; align-items: center; }
 .diversify-text .section-tag { color: #A78BFA; }
@@ -193,7 +193,7 @@ nav {
 @keyframes floatBob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);} }
 
 /* PRODUCTO (mockups) */
-.product-section { background: #12121f; padding: 7rem 2rem; }
+.product-section { background: var(--dark); padding: 7rem 2rem; }
 .product-section .section-tag { color: #A78BFA; }
 .product-section .section-title { color: white; }
 .product-section .section-sub { color: #9CA3AF; }
@@ -346,11 +346,10 @@ footer { background: #080810; padding: 4rem 2rem 2rem; }
 <!-- HERO -->
 <section class="hero">
   <div class="hero-content">
-    <div class="hero-badge">Asesoramiento financiero impulsado por IA</div>
     <h1>Invertí mejor con tu <span>asesor IA</span> personal</h1>
     <p>Descubrí tu perfil inversor, contanos tu objetivo, y recibí una cartera personalizada con proyecciones reales. Tu asesor guarda el historial de cada conversación para acompañarte mes a mes.</p>
     <div class="hero-ctas">
-      <a href="/register" class="btn btn-primary btn-lg">Probar demo gratis →</a>
+      <a href="/register" class="btn btn-primary btn-lg" style="justify-content:center;">Probar demo gratis</a>
       <a href="#como-funciona" class="btn btn-outline btn-lg" style="color:white;border-color:rgba(255,255,255,0.3);">Ver cómo funciona</a>
     </div>
     <div class="hero-stats">
