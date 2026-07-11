@@ -23,6 +23,7 @@ BASE_URL = os.environ.get('BASE_URL', 'https://invertia.onrender.com')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '').strip().lower()
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'InvertIA <onboarding@resend.dev>')
+CRON_SECRET = os.environ.get('CRON_SECRET', '')
 
 def is_admin():
     if not ADMIN_EMAIL or not session.get('user_id'): return False
@@ -131,7 +132,7 @@ def init_db():
     for col in ['objetivo_monto REAL','objetivo_plazo_meses INTEGER','objetivo_plazo_deseado_meses INTEGER','capital_mensual REAL','objetivo_retorno_anual REAL','objetivo_ahorrado_actual REAL']:
         try: conn.execute(f'ALTER TABLE user_profile ADD COLUMN {col}')
         except: pass
-    for col in ['phone TEXT']:
+    for col in ['phone TEXT','last_summary_sent TEXT']:
         try: conn.execute(f'ALTER TABLE users ADD COLUMN {col}')
         except: pass
     for col in ['mp_preapproval_id TEXT']:
@@ -396,11 +397,112 @@ def login():
     session['user_id']=user['id']; session['user_name']=user['name']
     return jsonify({'ok':True})
 
+def send_monthly_summary_email(user, actual, anterior):
+    ingresos, egresos = actual['ingresos'] or 0, actual['egresos'] or 0
+    balance = ingresos - egresos
+    tasa = round((balance/ingresos)*100) if ingresos else 0
+    y, m = actual['period'].split('-')
+    periodo_label = f"{MESES_ES[int(m)-1].capitalize()} {y}"
+    comparacion_html = ''
+    if anterior and anterior['ingresos']:
+        tasa_ant = round(((anterior['ingresos']-anterior['egresos'])/anterior['ingresos'])*100)
+        diff = tasa - tasa_ant
+        if diff > 0:
+            comparacion_html = f'<p style="color:#00A87A;font-size:14px;">🎉 Ahorraste {diff} puntos más que el mes anterior.</p>'
+        elif diff < 0:
+            comparacion_html = f'<p style="color:#EF4444;font-size:14px;">Bajaste {abs(diff)} puntos respecto al mes anterior.</p>'
+        else:
+            comparacion_html = '<p style="color:#6B7280;font-size:14px;">Mismo nivel de ahorro que el mes anterior.</p>'
+    if not RESEND_API_KEY: return False
+    try:
+        resp = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {RESEND_API_KEY}', 'Content-Type': 'application/json'},
+            json={
+                'from': RESEND_FROM_EMAIL,
+                'to': [user['email']],
+                'subject': f'Tu resumen de {periodo_label} — InvertIA',
+                'html': f'''
+                    <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:2rem;">
+                        <h2 style="color:#0D0D1A;">Invert<span style="color:#6C47FF;">IA</span></h2>
+                        <p style="color:#1F2937;font-size:16px;">Hola {user['name']}, así te fue en <strong>{periodo_label}</strong>:</p>
+                        <div style="display:flex;gap:10px;margin:1.25rem 0;">
+                            <div style="flex:1;background:#F3F4F6;border-radius:10px;padding:.75rem;text-align:center;">
+                                <div style="font-size:11px;color:#6B7280;">INGRESOS</div>
+                                <div style="font-size:15px;font-weight:700;color:#00A87A;">${ingresos:,.0f}</div>
+                            </div>
+                            <div style="flex:1;background:#F3F4F6;border-radius:10px;padding:.75rem;text-align:center;">
+                                <div style="font-size:11px;color:#6B7280;">EGRESOS</div>
+                                <div style="font-size:15px;font-weight:700;color:#EF4444;">${egresos:,.0f}</div>
+                            </div>
+                            <div style="flex:1;background:#EEE9FF;border-radius:10px;padding:.75rem;text-align:center;">
+                                <div style="font-size:11px;color:#6B7280;">AHORRO</div>
+                                <div style="font-size:15px;font-weight:700;color:#6C47FF;">{tasa}%</div>
+                            </div>
+                        </div>
+                        {comparacion_html}
+                        <a href="{BASE_URL}/app" style="display:inline-block;margin-top:1rem;padding:10px 20px;background:#6C47FF;color:white;text-decoration:none;border-radius:9px;font-size:14px;font-weight:600;">Ver el detalle completo →</a>
+                        <p style="color:#9CA3AF;font-size:12px;margin-top:2rem;">Contenido educativo. No constituye asesoramiento financiero profesional.</p>
+                    </div>
+                '''
+            }, timeout=15
+        )
+        return resp.status_code < 300
+    except Exception as e:
+        print('[Resend] excepcion al enviar resumen mensual:', repr(e), flush=True)
+        return False
+
+def maybe_send_monthly_summary(user):
+    """Manda el resumen del mes anterior (ya cerrado), apenas arranca el mes nuevo — nunca un mes
+    a medio terminar. Se puede llamar todos los dias sin riesgo: solo manda una vez por mes real."""
+    if user['plan'] != 'advanced': return False
+    hoy = datetime.now()
+    primer_dia_mes_actual = hoy.replace(day=1)
+    ultimo_dia_mes_pasado = primer_dia_mes_actual - timedelta(days=1)
+    mes_pasado = ultimo_dia_mes_pasado.strftime('%Y-%m')  # el mes recien terminado, el que hay que resumir
+    if user['last_summary_sent'] == mes_pasado: return False  # ya se lo mandamos
+
+    primer_dia_mes_pasado = ultimo_dia_mes_pasado.replace(day=1)
+    mes_anterior_al_pasado = (primer_dia_mes_pasado - timedelta(days=1)).strftime('%Y-%m')
+
+    conn = get_db()
+    actual = conn.execute('SELECT * FROM financial_snapshots WHERE user_id=? AND period=?',(user['id'],mes_pasado)).fetchone()
+    if not actual:
+        conn.close(); return False  # no cargo datos financieros ese mes, no hay nada que resumir
+    anterior = conn.execute('SELECT * FROM financial_snapshots WHERE user_id=? AND period=?',(user['id'],mes_anterior_al_pasado)).fetchone()
+    conn.close()
+
+    enviado = send_monthly_summary_email(user, actual, anterior)
+    if enviado:
+        conn = get_db()
+        conn.execute('UPDATE users SET last_summary_sent=? WHERE id=?',(mes_pasado,user['id']))
+        conn.commit(); conn.close()
+    return enviado
+
+@app.route('/api/cron/send-monthly-summaries')
+def cron_send_monthly_summaries():
+    """Pensado para ser llamado por un servicio de cron externo (ej: cron-job.org) una vez por dia.
+    Revisa a todos los usuarios Advanced y le manda el resumen solo a quien todavia no lo recibio este mes
+    (la funcion maybe_send_monthly_summary ya se encarga de no duplicar envios)."""
+    if not CRON_SECRET or request.args.get('secret') != CRON_SECRET:
+        return jsonify({'ok': False, 'error': 'No autorizado.'}), 403
+    conn = get_db()
+    usuarios = conn.execute("SELECT id,name,email,plan,last_summary_sent FROM users WHERE plan='advanced'").fetchall()
+    conn.close()
+    enviados = 0
+    for u in usuarios:
+        try:
+            if maybe_send_monthly_summary(u): enviados += 1
+        except Exception as e:
+            print('[cron] error mandando resumen a', u['email'], repr(e), flush=True)
+    print(f'[cron] resumenes mensuales: {enviados} enviados de {len(usuarios)} usuarios Advanced revisados', flush=True)
+    return jsonify({'ok': True, 'revisados': len(usuarios), 'enviados': enviados})
+
 @app.route('/me')
 def me():
     if not session.get('user_id'): return jsonify({'loggedIn':False})
     conn = get_db()
-    user = conn.execute('SELECT id,name,email,plan,demo_used,created_at FROM users WHERE id=?',(session['user_id'],)).fetchone()
+    user = conn.execute('SELECT id,name,email,plan,demo_used,created_at,last_summary_sent FROM users WHERE id=?',(session['user_id'],)).fetchone()
     if not user: conn.close(); return jsonify({'loggedIn':False})
     prof = conn.execute('SELECT * FROM user_profile WHERE user_id=?',(user['id'],)).fetchone()
     fin = conn.execute('SELECT * FROM financial_data WHERE user_id=?',(user['id'],)).fetchone()
