@@ -50,7 +50,7 @@
   <div class="logo">Invert<span>IA</span></div>
   <div class="subtitle">Tu asesor financiero con IA</div>
   <h2>Crear cuenta</h2>
-  <p style="font-size:14px;color:#6B7280;margin-top:4px;">Empezá gratis, sin tarjeta de crédito.</p>
+  <p id="form-subtitle" style="font-size:14px;color:#6B7280;margin-top:4px;">Empezá gratis, sin tarjeta de crédito.</p>
 
   <form id="form">
     <label>Tu nombre</label>
@@ -171,7 +171,9 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     verifyingEmail = data.email;
     document.getElementById('verify-email').textContent = data.email;
     document.getElementById('form').style.display = 'none';
+    document.getElementById('form-subtitle').style.display = 'none';
     document.getElementById('login-footer').style.display = 'none';
+    document.getElementById('form-subtitle').style.display = 'none';
     document.getElementById('verify-step').style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Crear cuenta gratis →';
