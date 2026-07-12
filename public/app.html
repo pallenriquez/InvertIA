@@ -809,6 +809,13 @@ function closeConfigAndClearChat(){document.getElementById('config-dropdown').cl
 // TABS
 function switchTab(tab){
   const isChat = tab==='chat';
+  // Freno de seguridad: si ya tenemos capital y objetivo guardados, la pantalla de "Tu perfil
+  // inversor" con los porcentajes NUNCA tiene que reaparecer — eso ya paso, y se puede volver a
+  // ver desde el menu de configuracion. Sin excepciones, pase lo que pase en el resto del flujo.
+  if(uCapital && uObjetivo){
+    const ps=document.getElementById('profile-section');
+    if(ps) ps.style.display='none';
+  }
   if(tab==='fin' && !finHistoryLoaded && userData && userData.plan==='advanced'){finHistoryLoaded=true;loadFinHistory();}
   ['chat','goal','fin','cuotas'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
@@ -1109,8 +1116,21 @@ function showReturningUser(days){
     updateGoalDashboard();
   }
   if(userData.plan==='advanced') finToastShown=true; // idem para el toast de finanzas
-  fetch('/api/returning-greeting',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
-    .then(r=>r.json()).then(d=>{if(d.ok)addAI(d.text);else addAI(`¡Hola de nuevo, ${userData.name}! ¿En qué te puedo ayudar hoy?`);});
+  // Traer el historial real de la charla, para que la persona pueda releer lo que ya hablaron
+  // en vez de encontrarse el chat vacio cada vez que vuelve.
+  fetch('/api/chat-history').then(r=>r.json()).then(h=>{
+    if(h.ok && h.messages){
+      h.messages.forEach(m=>{
+        if(m.role==='user') addUser(m.content);
+        else if(m.role==='assistant') addAI(m.content);
+      });
+    }
+    fetch('/api/returning-greeting',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+      .then(r=>r.json()).then(d=>{if(d.ok)addAI(d.text);else addAI(`¡Hola de nuevo, ${userData.name}! ¿En qué te puedo ayudar hoy?`);});
+  }).catch(()=>{
+    fetch('/api/returning-greeting',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+      .then(r=>r.json()).then(d=>{if(d.ok)addAI(d.text);else addAI(`¡Hola de nuevo, ${userData.name}! ¿En qué te puedo ayudar hoy?`);});
+  });
 }
 
 // ===== GOAL DASHBOARD =====
